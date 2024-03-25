@@ -1,0 +1,61 @@
+create table customermart.marine_data as(
+select *
+from (select distinct ab.dc_unified_id,cggc.ind_corp_flag,ab.source_customer_id,sad.pol_incept_date,sad.pol_exp_date,sad.record_type_desc,sad.channel,
+sad.policy_no,sad.certificate_no,sad.product_name,sad.lob,sad.channel_new_2,sad.sub_channel_new,sad.new_sub_channel,
+sad.product_cd,sad.ins_name_client_no,sad.lob_new,sad.proposal_no,b.status,
+row_number() over (partition by policy_no,coalesce(certificate_no,'0') order by binddate desc) rn
+from datamarts.sales_all_details sad
+left join underwriting_gc_cnfgtr_d_all_transactions b on sad.proposal_no=b.trans_id
+left join public.customer_gc_genmst_customer cggc on sad.ins_name_client_no = cggc.customer_code 
+left join (select mmp.dc_unified_id,mbdp.source_customer_id from public.mastercraft_bulk_detail_prod mbdp  
+join  public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id ) as ab 
+on sad.ins_name_client_no = ab.source_customer_id) as c
+where rn = 1 and record_type_desc!='CANCELLATION' and product_name = 'MARINESPECIFICPOLICY')
+distributed by (dc_unified_id)
+
+
+
+------------------------------ QUERY MODIFIED -----------------------------------------------
+
+
+create table customermart.marine_data as(
+select *
+from (select distinct ab.dc_unified_id,cggc.ind_corp_flag,ab.source_customer_id,sad.pol_incept_date,sad.pol_exp_date,sad.record_type_desc,sad.channel,
+sad.policy_no,sad.certificate_no,sad.product_name,sad.lob,sad.channel_new_2,sad.sub_channel_new,sad.new_sub_channel,
+sad.product_cd,sad.ins_name_client_no,sad.lob_new,sad.proposal_no,b.status,
+row_number() over (partition by policy_no,coalesce(certificate_no,'0') order by binddate desc) rn
+from datamarts.sales_all_details sad
+left join underwriting_gc_cnfgtr_d_all_transactions b on sad.proposal_no=b.trans_id
+left join public.customer_gc_genmst_customer cggc on sad.ins_name_client_no = cggc.customer_code 
+left join (select mmp.dc_unified_id,mbdp.source_customer_id from public.mastercraft_bulk_detail_prod mbdp  
+join  public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id ) as ab 
+on sad.ins_name_client_no = ab.source_customer_id
+where  product_name = 'MARINESPECIFICPOLICY')as c
+where rn = 1 and record_type_desc!='CANCELLATION' )
+distributed by (dc_unified_id)
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+select count(distinct dc_unified_id), channel_final, count(distinct policy_no || coalesce (certificate_no,'0'))
+from (select *, row_number() over (partition by policy_no, coalesce(certificate_no,'0'), pol_exp_date, pol_incept_date order by timestamp desc) rn 
+from customermart.marine_data_ebiz_1
+where pol_incept_date between '2022-04-01' and '2023-03-) 
+as a where record_type_desc != 'CANCELLATION'
+and rn = 1
+group by channel_final
+
+
+---------- some changes tried for active policies on a month basis-----------------------
+
+select count(distinct dc_unified_id), channel_final, count(distinct policy_no || coalesce (certificate_no,'0'))
+from (select *, row_number() over (partition by policy_no, coalesce(certificate_no,'0') order by timestamp desc) rn 
+from customermart.marine_data_ebiz_1
+where pol_exp_date > '2023-04-30') 
+as a where record_type_desc != 'CANCELLATION'
+and rn = 1
+group by channel_final 
