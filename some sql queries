@@ -1,0 +1,159 @@
+
+select distinct mmp.dc_unified_id, mbdp.source_customer_id, mbdp.dc_action_date
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where  concat(mmp.dc_unified_id || mbdp.source_customer_id) not in 
+(select distinct concat(golden_id || source_system_customer_id) from customermart.header
+where mapping_date::date = '2023-11-22') and 
+mbdp.dc_action_date::date = '2023-11-22' and mmp.dc_active_flag = 1 
+
+
+select distinct mmp.dc_unified_id, mbdp.source_customer_id, mbdp.dc_action_date
+--row_number () over(partition by mmp.dc_unified_id, mbdp.source_customer_id order by mbdp.dc_action_date desc ) rn
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where  concat(mmp.dc_unified_id || mbdp.source_customer_id) not in 
+(select distinct concat(golden_id || source_system_customer_id) from customermart.header
+where mapping_date::date = '2023-11-22') and 
+mbdp.dc_action_date::date = '2023-11-22' and mmp.dc_active_flag = 1 --) as a where rn = 1
+
+
+
+select distinct mmp.dc_unified_id, mbdp.source_customer_id, mbdp.dc_action_date
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where  concat(mmp.dc_unified_id || mbdp.source_customer_id) not in 
+(select distinct concat(golden_id || source_system_customer_id) from customermart.header
+where mapping_date <= '2023-11-25 20:02:19.243') and 
+mbdp.dc_action_date <= '2023-11-25 20:02:19.243' and mmp.dc_active_flag = 1
+
+
+select distinct mmp.dc_unified_id, mbdp.source_customer_id, mbdp.dc_action_date
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where  coalesce(mbdp.source_customer_id, cast(mmp.dc_unified_id as varchar)) in 
+(select distinct cast(source_system_customer_id as varchar) from customermart.address a 
+where last_updated between '2023-12-01 21:38:17.17' and '2023-12-02 00:00:00.000' ) and 
+mbdp.dc_action_date between '2023-12-01 21:38:17.17' and '2023-12-02 00:00:00.000' 
+and mmp.dc_active_flag = 1 
+
+
+
+select distinct mmp.dc_unified_id, mbdp.dc_action_date
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where  mmp.dc_unified_id not in 
+(select distinct golden_id from customermart.customer_profile
+where last_updated <= '2023-12-02 00:00:00.00') and 
+mbdp.dc_action_date <= '2023-12-02 00:00:00.00' and mmp.dc_active_flag = 1
+
+select mmp.dc_unified_id,  
+row_number() over (partition by mmp.dc_unified_id order by dc_action_date  desc) rnk, 
+from public.mastercraft_bulk_detail_prod mbdp inner join 
+public.mastercraft_master_prod mmp on mbdp.dc_unified_id = mmp.dc_unified_id where mmp.dc_active_flag=1) as ab 
+where rnk = 1) a
+
+select distinct mmp.dc_unified_id
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where mbdp.dc_action_date <= '2023-12-09 08:53:59.293'
+except 
+select distinct golden_id from customermart.customer_profile cp
+where cp.last_updated <= '2023-12-09 08:53:59.293'
+
+select distinct dc_unified_id, dc_action_date from public.mastercraft_bulk_detail_prod mbdp
+where dc_unified_id in ('67853484',
+'41558198',
+'25112986',
+'50043713',
+'14590564',
+'522609',
+'59733575',
+'663900',
+'9649504',
+'53058898')
+
+select distinct golden_id, last_updated from customermart.customer_profile
+where golden_id in ('67853484',
+'41558198',
+'25112986',
+'50043713',
+'14590564',
+'522609',
+'59733575',
+'663900',
+'9649504',
+'53058898')
+
+select distinct dc_unified_id, dc_active_flag from public.mastercraft_master_prod
+where dc_unified_id in ('67853484',
+'41558198',
+'25112986',
+'50043713',
+'14590564',
+'522609',
+'59733575',
+'663900',
+'9649504',
+'53058898')
+
+select distinct mmp.dc_unified_id
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where mbdp.dc_action_date <= '2023-12-09 08:53:59.293'
+and mmp.dc_active_flag = 1
+except 
+select distinct golden_id from customermart.customer_profile cp
+where cp.last_updated <= '2023-12-09 08:53:59.293'
+
+
+select distinct a.dc_unified_id from (select mmp.dc_unified_id,
+row_number() over (partition by mmp.dc_unified_id order by dc_action_date  desc) rnk
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where mbdp.dc_action_date <= '2023-12-09 08:53:59.293' and mmp.dc_active_flag = 1)a where rnk = 1
+except 
+select distinct golden_id from customermart.customer_profile cp
+where cp.last_updated <= '2023-12-09 08:53:59.293'
+
+
+select count(distinct a.dc_unified_id) from (select mmp.dc_unified_id,
+row_number() over (partition by mmp.dc_unified_id order by dc_action_date  desc) rnk
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where mbdp.dc_action_date <= '2023-12-11 21:05:11.657' 
+and mmp.dc_active_flag = 1)a where rnk = 1
+
+
+
+select distinct a.dc_unified_id from (select mmp.dc_unified_id,
+row_number() over (partition by mmp.dc_unified_id order by dc_action_date  desc) rnk
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where mbdp.dc_action_date <= '2023-12-09 08:53:59.293')a where rnk = 1
+except 
+select distinct golden_id from customermart.customer_profile cp
+where cp.last_updated <= '2023-12-09 08:53:59.293'
+
+
+
+select distinct golden_id from customermart.customer_demographics
+where last_updated <= '2023-12-11 21:05:11.657' 
+and golden_id not in 
+(select distinct a.dc_unified_id from (select mmp.dc_unified_id,
+row_number() over (partition by mmp.dc_unified_id order by dc_action_date  desc) rnk
+from public.mastercraft_bulk_detail_prod mbdp 
+inner join public.mastercraft_master_prod mmp 
+on mbdp.dc_unified_id = mmp.dc_unified_id 
+where mbdp.dc_action_date <= '2023-12-11 21:05:11.657' 
+and mmp.dc_active_flag = 1)a where rnk = 1)
