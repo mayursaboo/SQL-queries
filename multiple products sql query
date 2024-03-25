@@ -1,0 +1,146 @@
+create table customermart.new_cust_multi_product_step1_jan2024 as                                                         ----------table created 
+(select distinct mmp.dc_unified_id, string_agg(distinct product_name,',') as products_name, count(distinct product_name) as product_cnt
+from registers.premium_register pr
+join public.mastercraft_bulk_detail_prod mbdp on pr.customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id =mbdp.dc_unified_id 
+where pol_incept_date >='2020-03-01' and pol_incept_date <'2024-01-31' and mmp.dc_active_flag = 1
+group by mmp.dc_unified_id
+having count(distinct product_name) > 1)
+
+
+select distinct mmp.dc_unified_id, pr.customer_id, pr.certificate_no, mmp.extractedname as proposer_name, pr.client_name, pr.product_name, mps.products_name as product,
+pr.premium_amount_inr_without_tax, sd.crs_new as crs_no , pr.pol_incept_date, pr.pol_exp_date, pr.vehicle_registration_no   
+from registers.premium_register pr
+join datamarts.sales_all_details sd
+on pr.num_reference_no = sd.proposal_no
+join public.mastercraft_master_prod mmp 
+on pr.customer_id = mmp.source_customer_id 
+join customermart.new_cust_multi_product_step1_jan2024 mps
+on mmp.dc_unified_id = mps.dc_unified_id 
+
+
+
+--------some changes
+
+create table customermart.new_cust_multi_product_step1_jan2024 as
+(select distinct mmp.dc_unified_id, string_agg(distinct product_name,',') as products_name, count(distinct product_name) as product_cnt
+from registers.premium_register pr
+join public.mastercraft_bulk_detail_prod mbdp on pr.customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id =mbdp.dc_unified_id 
+where pol_incept_date >='2020-03-01' and pol_incept_date <'2024-01-31' and mmp.dc_active_flag = 1
+group by mmp.dc_unified_id
+having count(distinct product_name) > 1)
+
+
+
+
+------------after discussion again change query                ----------finally table created
+
+create table customermart.cust_multpl_prod_new1 as (
+select distinct mbdp.dc_unified_id, sd.ins_name_client_no as client_id , sd.policy_no, sd.certificate_no, sd.proposal_no, sd.clientname as proposer_name, sd.product_name, mps.products_name as product,
+sd.crs_new as crs_no , sd.pol_incept_date, sd.pol_exp_date, sd.registration_no , sd.lob, sd.binddate, sd.record_type_desc, sd.channel_new_2, sd.channel 
+from datamarts.sales_all_details sd
+join public.mastercraft_bulk_detail_prod mbdp
+on sd.ins_name_client_no = mbdp.source_customer_id 
+join customermart.new_cust_multi_product_step1_jan2024 mps
+on mbdp.dc_unified_id = mps.dc_unified_id 
+where pol_incept_date >='2020-03-01' and pol_incept_date <'2024-01-31')
+
+
+-------------next step 1                                         -----------table created
+
+create table customermart.custmr_multpi_prod_prt2 as
+(select cmp.*, sum(sd.premiumamount) over (partition by sd.policy_no,coalesce(sd.certificate_no,'0') ,sd.pol_incept_date, sd.pol_exp_date) as premium  from customermart.cust_multpl_prod_new1 cmp
+join datamarts.sales_all_details sd
+on cmp.proposal_no = sd.proposal_no)
+
+
+---------------next step 2
+
+select * from (select cmp.*, row_number() over (partition by policy_no,coalesce(certificate_no,'0') ,pol_incept_date, pol_exp_date order by binddate desc, proposal_no desc ) rn 
+from customermart.custmr_multpi_prod_prt2 cmp) a
+where rn = 1
+
+
+-------same query with selected columns instead of '*'
+
+select * from (select dc_unified_id, client_id, policy_no, certificate_no, proposal_no,
+proposer_name, product_name,crs_no, pol_incept_date, pol_exp_date, registration_no, lob, binddate,
+record_type_desc, channel_new_2, channel, premium,
+row_number() over (partition by policy_no,coalesce(certificate_no,'0') ,pol_incept_date, pol_exp_date order by binddate desc, proposal_no desc ) rn
+from customermart.custmr_multpi_prod_prt2 cmp) a
+where rn = 1 
+
+
+
+---------cross checked
+
+select prod_cnt, count(distinct dc_unified_id) as gid_cnt from (select  dc_unified_id, count(distinct product_name) as prod_cnt from (select cmp.*, row_number() over (partition by policy_no,coalesce(certificate_no,'0') ,pol_incept_date, pol_exp_date order by binddate desc, proposal_no desc ) rn 
+from customermart.custmr_multpi_prod_prt2 cmp ) a
+where rn = 1 group by dc_unified_id)b
+group by prod_cnt 
+
+
+
+
+---------only to check distinct golden_id for prod_cnt =1 
+select prod_cnt,  dc_unified_id from (select  dc_unified_id, count(distinct product_name) as prod_cnt from 
+(select cmp.*, row_number() over (partition by policy_no,coalesce(certificate_no,'0') ,pol_incept_date, pol_exp_date order by binddate desc, proposal_no desc ) rn 
+from customermart.custmr_multpi_prod_prt2 cmp ) a
+where rn = 1 group by dc_unified_id)b
+where prod_cnt = 1
+
+
+
+
+
+--------------
+
+create table customermart.custmr_multpi_prod_prt3 as (
+select dc_unified_id, client_id, policy_no, certificate_no, proposal_no,
+proposer_name, product_name,crs_no, pol_incept_date, pol_exp_date, registration_no, lob, binddate,
+record_type_desc, channel_new_2, channel, premium, product_cnt from
+(select cmp.*, a.product_cnt, row_number() over (partition by policy_no,coalesce(certificate_no,'0') ,pol_incept_date, pol_exp_date order by binddate desc, proposal_no desc ) rn 
+from customermart.custmr_multpi_prod_prt2 cmp 
+join (select dc_unified_id, count(distinct product_name) as product_cnt from customermart.custmr_multpi_prod_prt2
+group by dc_unified_id
+having count(distinct product_name) > 1 ) a on cmp.dc_unified_id = a.dc_unified_id) as b 
+where rn = 1) distributed by (dc_unified_id)                                          ----------count(*) = 91,69, 216
+
+
+select count(distinct dc_unified_id), product_cnt from customermart.custmr_multpi_prod_prt3
+group by product_cnt
+
+select count(*) from customermart.custmr_multpi_prod_prt3
+
+
+
+
+
+
+
+
+
+
+create table customermart.new_cust_multi_product_step1_jan2024 as                                                         ----------table created 
+(select distinct mmp.dc_unified_id, string_agg(distinct product_name,',') as products_name, count(distinct product_name) as product_cnt
+from registers.premium_register pr
+join (select mmp.dc_unified_id from public.mastercraft_bulk_detail_prod mbdp 
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id =mbdp.dc_unified_id and mmp.dc_active_flag = 1)
+where pol_incept_date >='2020-03-01' and pol_incept_date <'2024-01-31' 
+group by mmp.dc_unified_id
+having count(distinct product_name) > 1)
+
+
+
+select * from customermart.new_cust_multi_product_step1_jan2024
+where product_cnt = 7 limit 3
+
+select * from customermart.custmr_multpi_prod_prt2
+where dc_unified_id in ('6288552',
+'76051731',
+'19111601')
+
+select ins_name_client_no, policy_no, clientname, product_name, pol_incept_date, pol_exp_date , record_type_desc from datamarts.sales_all_details
+where ins_name_client_no in  in ('5006094282',
+
