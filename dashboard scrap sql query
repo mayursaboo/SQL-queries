@@ -1,0 +1,850 @@
+select distinct product_cd from customermart.retail_corp_v1 rc where rc.product_cd::int in (2888,3184,3121)
+
+select p
+
+create table customermart.dashboard_coe_1 as(
+select distinct rc.dc_unified_id,rc.customer_id,sad.policy_no,sad.certificate_no,sad.policy_counter,sad.times_renewed_cnt,sad.renl_cert_no,
+sad.report_accounting_period,sad.proposal_no,
+sad.channel,sad.pol_incept_date,sad.pol_exp_date,sad.sum_insured,sad.premiumamount,sad.total_premium,sad.record_type_desc,
+sad.producername,sad.no_claim_bonus,sad.veh_age,sad.veh_body,sad.veh_make,sad.veh_model,sad.segment_type,sad.plan_type,sad.no_of_lives 
+from customermart.retail_corp_v1 rc
+join registers.premium_register pr on pr.customer_id =rc.customer_id and rc.product_cd::int in (2888,3184,3121) and rc.rn=1
+join datamarts.sales_all_details sad on sad.proposal_no =pr.num_reference_no and sad.pol_incept_date between '2021-04-01' and '2023-03-18'
+)distributed by (proposal_no)
+
+select customer_id ,policy_no,certificate_no from registers.premium_register pr where policy_no ='0239740745'
+
+drop table customermart.dashboard_coe_2
+
+create table customermart.dashboard_coe_2 as(select 
+distinct  dc_unified_id,customer_id,policy_no,certificate_no,policy_counter,times_renewed_cnt,renl_cert_no,report_accounting_period,proposal_no,channel,pol_incept_date,pol_exp_date,sum_insured,premiumamount,total_premium,record_type_desc,
+producername,no_claim_bonus,veh_age,veh_body,veh_make,veh_model,segment_type,plan_type,no_of_lives from
+(select a.*,
+row_number () over(partition by customer_id order by dc_unified_id desc nulls last) rn
+from customermart.dashboard_coe_1 a) as b where rn=1 )distributed by (proposal_no)
+
+create table customermart.qlik_dashboard_1 as(
+select distinct pr.customer_id,sad.policy_no,sad.certificate_no,sad.policy_counter,sad.times_renewed_cnt,sad.renl_cert_no,
+sad.report_accounting_period,sad.proposal_no,
+sad.channel,sad.pol_incept_date,sad.pol_exp_date,sad.sum_insured,sad.premiumamount,sad.total_premium,sad.record_type_desc,
+sad.producername,sad.no_claim_bonus,sad.veh_age,sad.veh_body,sad.veh_make,sad.veh_model,sad.segment_type,sad.plan_type,sad.no_of_lives,sad.policy_type,
+sad.policy_variant 
+from registers.premium_register pr
+join datamarts.sales_all_details sad on sad.proposal_no =pr.num_reference_no and sad.pol_incept_date between '2021-04-01' and '2023-03-18'
+and pr.product_cd::int in (2888,3184,3121))distributed by (proposal_no)
+
+
+create table customermart.qlik_dashboard_3 as(
+select distinct a.dc_unified_id,a.presentaddress_city,a.pstincomingstate,sad.customer_id,sad.policy_no,sad.certificate_no,sad.policy_counter,
+sad.times_renewed_cnt,sad.renl_cert_no,sad.report_accounting_period,sad.proposal_no,
+sad.channel,sad.pol_incept_date,sad.pol_exp_date,sad.sum_insured,sad.premiumamount,sad.total_premium,sad.record_type_desc,
+sad.producername,sad.no_claim_bonus,sad.veh_age,sad.veh_body,sad.veh_make,sad.veh_model,sad.segment_type,sad.plan_type,sad.no_of_lives,sad.policy_type,
+sad.policy_variant from customermart.qlik_dashboard_1 sad
+left join (select mbdp.source_customer_id, mbdp.dc_unified_id,mmp.presentaddress_city,mmp.pstincomingstate from public.mastercraft_bulk_detail_prod mbdp join 
+public.mastercraft_master_prod mmp on mbdp.dc_unified_id = mmp.dc_unified_id and mmp.dc_active_flag=1) a on a.source_customer_id =sad.customer_id
+)distributed by (proposal_no)
+
+
+
+create table customermart.qlik_dashboard_v4 as(
+select  distinct sad.dc_unified_id,sad.presentaddress_city,sad.pstincomingstate,sad.customer_id,sad.policy_no,sad.certificate_no,sad.policy_counter,
+sad.times_renewed_cnt,sad.renl_cert_no,sad.report_accounting_period,sad.proposal_no,
+sad.channel,sad.pol_incept_date,sad.pol_exp_date,sad.sum_insured,sad.premiumamount,sad.total_premium,sad.record_type_desc,
+sad.producername,sad.no_claim_bonus,sad.veh_age,sad.veh_body,sad.veh_make,sad.veh_model,sad.segment_type,sad.plan_type,sad.no_of_lives,sad.policy_type,
+sad.policy_variant,temp.communication_type,temp.value,decode (cp.service_level,5,'HNI',null) hni_flag,
+cd.gender,cd.marital_status,cd.tobacco_use_indicator,cd.alcohol_use_indicator, 
+case when extract (year from age(current_date,cd.birth_date))>=60 then 1 else 0 end as senior_citizen,
+extract (year from age(current_date,cd.birth_date)) age
+from customermart.qlik_dashboard_3 sad
+left join(select distinct source_system_customer_id,communication_type,value from(
+select  source_system_customer_id ,communication_type,communication_sub_type,value from (
+select  source_system_customer_id ,communication_type,communication_sub_type,value from contactability c
+union
+select  source_system_customer_id ,communication_type,communication_sub_type,value from df_paynow_f dpf 
+union 
+select  source_system_customer_id, communication_type,communication_sub_type,value from df_salesforce_main dsm2)  
+as a where communication_type !='Invalid' ) c )temp on temp.source_system_customer_id=sad.customer_id
+left join customermart.customer_profile cp on cp.golden_id =sad.dc_unified_id
+left join customermart.customer_demographics cd on cd.golden_id=sad.dc_unified_id)
+distributed by (proposal_no)
+
+select * from customermart.qlik_dashboard_v4 limit 5
+
+create table customermart.qlik_dashboard_v5 as(
+select distinct  dc_unified_id,presentaddress_city,pstincomingstate,customer_id,policy_no,certificate_no,policy_counter,times_renewed_cnt,renl_cert_no,
+report_accounting_period,proposal_no,channel,pol_incept_date,pol_exp_date,sum_insured,premiumamount,total_premium,record_type_desc,producername,
+no_claim_bonus,veh_age,veh_body,veh_make,veh_model,segment_type,plan_type,no_of_lives,policy_type,policy_variant,communication_type,value,hni_flag,
+gender,marital_status,tobacco_use_indicator,alcohol_use_indicator,senior_citizen,age,temp.dependent_child,temp.dependent_parents
+from customermart.qlik_dashboard_v4 c
+left join (
+select reference_num,sum(dependent_child) dependent_child,sum(dependent_parents) dependent_parents from (
+select reference_num ,
+case when lower(risk1) like '%child%' then 1 else 0 end dependent_child,
+case when lower(risk1) like '%parent%' then 1 else 0 end dependent_parents
+from public.policy_dh_risk_details_hlt) as a 
+group by reference_num) as temp on temp.reference_num =c.proposal_no)
+distributed by (proposal_no)
+
+select * from customermart.qlik_dashboard_v4
+left join (
+select reference_num,sum(dependent_child) dependent_child,sum(dependent_parents) dependent_parents from (
+select reference_num ,
+case when lower(risk1) like '%child%' then 1 else 0 end dependent_child,
+case when lower(risk1) like '%parent%' then 1 else 0 end dependent_parents
+from public.policy_dh_risk_details_hlt) as a 
+group by reference_num) as temp on temp.reference_num =c.reference_num
+
+
+select * from 
+
+select golden_id,max(mobile_contactibility) mobile_contactibility ,max(email_contactibility)  email_contactibility from (
+select distinct golden_id, case when  communication_type!='Invalid' and communication_type in ('phone','Phone') and value is not null 
+then 1 else 0 end mobile_contactibility,
+case when  communication_type!='Invalid' and communication_type in ('Email','email') and value is not null 
+then 1 else 0 end email_contactibility
+from customermart.mot_hlt_dashboard c
+
+select * from contactability limit 5
+
+
+
+create table customermart.qlik_dashboard_v6 as (
+select distinct mhd.dc_unified_id,presentaddress_city,pstincomingstate,customer_id,policy_no,certificate_no,policy_counter,times_renewed_cnt,renl_cert_no,
+report_accounting_period,proposal_no,channel,pol_incept_date,pol_exp_date,sum_insured,premiumamount,total_premium,record_type_desc,producername,
+no_claim_bonus,veh_age,veh_body,veh_make,veh_model,segment_type,plan_type,no_of_lives,policy_type,policy_variant,
+hni_flag,gender,marital_status,tobacco_use_indicator,alcohol_use_indicator,senior_citizen,age,dependent_child,dependent_parents,temp.mobile_contactibility,
+temp.email_contactibility
+from customermart.qlik_dashboard_v5 mhd left join(
+select dc_unified_id,max(mobile_contactibility) mobile_contactibility ,max(email_contactibility)  email_contactibility from (
+select distinct dc_unified_id, case when  communication_type!='Invalid' and communication_type in ('phone','Phone') and value is not null 
+then 1 else 0 end mobile_contactibility,
+case when  communication_type!='Invalid' and communication_type in ('Email','email') and value is not null 
+then 1 else 0 end email_contactibility
+from customermart.qlik_dashboard_v5 c) as a group by dc_unified_id) temp on temp.dc_unified_id=mhd.dc_unified_id)
+distributed by (dc_unified_id,proposal_no)
+
+select * from customermart.qlik_dashboard_v6 limit 5
+
+
+create table customermart.qlik_dashboard_v7 as (
+select pr.dc_unified_id,pr.presentaddress_city,pr.pstincomingstate,pr.customer_id,pr.policy_no,pr.certificate_no,pr.policy_counter,pr.times_renewed_cnt,
+pr.renl_cert_no,pr.report_accounting_period,pr.proposal_no,pr.channel,pr.pol_incept_date,pr.pol_exp_date,pr.sum_insured,pr.premiumamount,
+pr.total_premium,pr.record_type_desc,pr.producername,pr.no_claim_bonus,pr.veh_age,pr.veh_body,pr.veh_make,pr.veh_model,pr.segment_type
+,pr.no_of_lives,pr.policy_type,pr.policy_variant,pr.hni_flag,pr.gender,pr.marital_status,pr.tobacco_use_indicator,pr.alcohol_use_indicator,
+pr.senior_citizen,pr.age,pr.dependent_child,pr.dependent_parents,pr.mobile_contactibility,pr.email_contactibility,a.plan_type,a.accidentaldeathrider
+from customermart.qlik_dashboard_v6 pr left join (select reference_num,plan_type,accidentaldeathrider from policy_dh_risk_headers_hlt
+union 
+select reference_num,plan_selected plan_type,null accidentaldeathrider from policy_dh_risk_headers_mot) a on pr.proposal_no =a.reference_num)
+distributed by (dc_unified_id,proposal_no)
+
+select reference_num,1 ncb_flag from public.reference_gc_cnfgtr_policy_ld_dtls where LDDESC='No Claim Bonus'
+
+
+
+create table customermart.qlik_dashboard_v8 as (
+select distinct a.dc_unified_id,a.presentaddress_city,a.pstincomingstate,a.customer_id,a.policy_no,a.certificate_no,a.policy_counter,a.times_renewed_cnt,
+a.renl_cert_no,a.report_accounting_period,a.proposal_no,a.channel,a.pol_incept_date,a.pol_exp_date,a.sum_insured,a.premiumamount,a.total_premium,
+a.record_type_desc,a.producername,a.no_claim_bonus,a.veh_age,a.veh_body,a.veh_make,a.veh_model,a.segment_type,a.no_of_lives,a.policy_type,
+a.policy_variant,a.hni_flag,a.gender,a.marital_status,a.tobacco_use_indicator,a.alcohol_use_indicator,a.senior_citizen,a.age,a.dependent_child,
+a.dependent_parents,a.mobile_contactibility,a.email_contactibility,a.plan_type,a.accidentaldeathrider,b.ncb_flag,
+c.uw_discount,c.uw_loading from customermart.qlik_dashboard_v7 a
+left join (select reference_num,1 ncb_flag from public.reference_gc_cnfgtr_policy_ld_dtls where LDDESC='No Claim Bonus') b
+on a.proposal_no =b.reference_num
+left join(select reference_num ,uw_discount,uw_loading from public.policy_dh_risk_headers_mot) c on
+a.proposal_no =c.reference_num)
+distributed by (dc_unified_id,proposal_no)
+
+
+Renewal Propensity	
+Cross Sell Propensity	
+
+exshowroomprice
+
+create table customermart.qlik_dashboard_v9 as (
+select distinct dc_unified_id,presentaddress_city,pstincomingstate,customer_id,policy_no,certificate_no,policy_counter,times_renewed_cnt,
+renl_cert_no,report_accounting_period,proposal_no,channel,pol_incept_date,pol_exp_date,sum_insured,premiumamount,total_premium,record_type_desc,
+producername,no_claim_bonus,veh_age,veh_body,veh_make,veh_model,segment_type,replace (no_of_lives,'.0','')::int  no_of_lives,
+policy_type,policy_variant,hni_flag,gender,
+marital_status,tobacco_use_indicator,alcohol_use_indicator,senior_citizen,age,dependent_child,dependent_parents,mobile_contactibility,email_contactibility,
+plan_type,accidentaldeathrider,ncb_flag, uw_discount::float,uw_loading::float,decode(hni_flag,'HNI',1,0)::int is_hni,
+decode(tobacco_use_indicator,true,1,0) tobacco_use_indicator_flag,decode(alcohol_use_indicator,true,1,0)::int alcohol_use_indicator_flag,
+case when record_type_desc='CANCELLATION' then -1
+when record_type_desc='NEW BUSINESS' then 1
+when record_type_desc='RENEWAL BUSINESS' then 1
+when record_type_desc='ENDORSEMENT' then 0
+end as policy_cnt,decode(accidentaldeathrider,'True',1,'False',0)::int accidental_deathrider_flag
+from customermart.qlik_dashboard_v8 )
+distributed by (dc_unified_id,proposal_no)
+
+create table customermart.qlik_dashboard_v10 as (
+select distinct a.dc_unified_id,a.presentaddress_city,a.pstincomingstate,a.customer_id,a.policy_no,a.certificate_no,a.policy_counter,a.times_renewed_cnt,
+a.renl_cert_no,a.report_accounting_period,a.proposal_no,a.channel,a.pol_incept_date,a.pol_exp_date,a.sum_insured,a.premiumamount,
+a.total_premium,a.record_type_desc,a.producername,a.no_claim_bonus,a.veh_age,a.veh_body,a.veh_make,a.veh_model,a.segment_type,a.no_of_lives,
+a.policy_type,a.policy_variant,a.hni_flag,a.gender,a.marital_status,a.tobacco_use_indicator,a.alcohol_use_indicator,a.senior_citizen,a.age,
+a.dependent_child,a.dependent_parents,a.mobile_contactibility,a.email_contactibility,a.plan_type,a.accidentaldeathrider,a.ncb_flag,a.uw_discount,
+a.uw_loading,a.is_hni,a.tobacco_use_indicator_flag,a.alcohol_use_indicator_flag,a.policy_cnt,a.accidental_deathrider_flag,c.exshowroomprice
+from customermart.qlik_dashboard_v9 a left join(select reference_num ,exshowroomprice::float from public.policy_dh_risk_headers_mot) c on
+a.proposal_no =c.reference_num)
+distributed by (dc_unified_id,proposal_no)
+
+
+create table customermart.qlik_dashboard_v12 as (
+select a.dc_unified_id,a.presentaddress_city,a.pstincomingstate,a.customer_id,a.policy_no,a.certificate_no,a.policy_counter,a.times_renewed_cnt,a.renl_cert_no,a.report_accounting_period,a.proposal_no,a.channel,a.pol_incept_date,a.pol_exp_date,a.sum_insured,a.premiumamount,a.total_premium,a.record_type_desc,a.producername,a.no_claim_bonus,a.veh_age,a.veh_body,a.veh_make,a.veh_model,a.segment_type,a.no_of_lives,a.policy_type,a.policy_variant,a.hni_flag,a.gender,a.marital_status,a.tobacco_use_indicator,a.alcohol_use_indicator,a.senior_citizen,a.age,a.dependent_child,a.dependent_parents,a.mobile_contactibility,a.email_contactibility,a.plan_type,a.accidentaldeathrider,a.ncb_flag,a.uw_discount,a.uw_loading,a.is_hni,a.tobacco_use_indicator_flag,a.alcohol_use_indicator_flag,a.policy_cnt,a.accidental_deathrider_flag
+,claim_no,claim_feature_concat
+,claim_gross
+,claim_net
+,claim_status_cd,cheque_date,cheque_bounce,cheque_no,nett_cheque_amount from  
+customermart.qlik_dashboard_v10 a 
+left join (select claim_no,policy_no
+,claim_feature_concat
+,claim_gross
+,claim_net
+,claim_status_cd,cheque_date,cheque_bounce,cheque_no,nett_cheque_amount 
+,num_reference_no 
+ from datamarts.claim_report_gc_p2 crp where account_line_cd='50' and trans_type_cd in ('21','22','23')
+ and claim_status_cd in ('Closed','Close')) b on b.num_reference_no=a.proposal_no)
+ distributed by (dc_unified_id,proposal_no)
+
+create table customermart.qlik_dashboard_v_13 as (
+select distinct a.dc_unified_id,a.presentaddress_city,a.pstincomingstate,a.customer_id,a.policy_no,a.certificate_no,a.policy_counter,a.times_renewed_cnt,
+a.renl_cert_no,a.report_accounting_period,a.proposal_no,a.channel,a.pol_incept_date,a.pol_exp_date,a.sum_insured,a.premiumamount,a.total_premium,
+a.record_type_desc,a.producername,a.no_claim_bonus,a.veh_age,a.veh_body,a.veh_make,a.veh_model,a.segment_type,a.no_of_lives,a.policy_type,
+a.policy_variant,a.hni_flag,a.gender,a.marital_status,a.tobacco_use_indicator,a.alcohol_use_indicator,a.senior_citizen,a.age,
+a.dependent_child,a.dependent_parents,a.mobile_contactibility,a.email_contactibility,a.plan_type,a.accidentaldeathrider,a.ncb_flag,
+a.uw_discount,a.uw_loading,a.is_hni,a.tobacco_use_indicator_flag,a.alcohol_use_indicator_flag,a.policy_cnt,a.accidental_deathrider_flag,
+a.claim_no,a.claim_feature_concat,a.claim_gross,a.claim_net,a.claim_status_cd,a.cheque_date,a.cheque_bounce,a.cheque_no,a.nett_cheque_amount,
+c.mfg_year,c.binddate,c.product_name from  
+customermart.qlik_dashboard_v12 a 
+left join (select mfg_year,binddate,proposal_no,product_name from datamarts.sales_all_details sad) c on a.proposal_no=c.proposal_no) 
+distributed by (dc_unified_id,proposal_no)
+
+select count(distinct policy_no||certificate_no ),product_name from customermart.qlik_dashboard_v_13 where pol_exp_date>current_date
+group by product_name
+
+select count(distinct policy_no||','||coalesce (certificate_no,'0')) from datamarts.motor_premium
+where policy_no||','||coalesce (certificate_no,'0') not in (select policy_no||','||coalesce (certificate_no,'0') from datamarts.motor_premium
+where record_type='CANCELLATION' and policy_no is not null)
+
+select count(distinct policy_no),dc_unified_id from customermart.qlik_dashboard_v_13
+group by dc_unified_id having count(distinct policy_no)>1
+
+select * from(
+select *,row_number() over(partition by policy_no,coalesce (certificate_no,'00000000'),pol_incept_date,pol_exp_date order by binddate) rn,
+sum(premiumamount) over(partition by policy_no,coalesce (certificate_no,'00000000'),pol_incept_date,pol_exp_date,record_type_desc) premiumamount_m,
+sum(total_premium) over(partition by policy_no,coalesce (certificate_no,'00000000'),pol_incept_date,pol_exp_date,record_type_desc) total_premium_m,
+max(sum_insured) over(partition by policy_no,coalesce (certificate_no,'00000000'),pol_incept_date,pol_exp_date) sum_insured_m
+from customermart.qlik_dashboard_v_13 where dc_unified_id in ('89161347','78781856','91009118','68458200')) as a where rn=1
+
+select business_type,record_type_desc from datamarts.sales_all_details sad where policy_no ='3100016655'
+
+drop table customermart.qlik_dashboard_final_v1
+
+create table customermart.qlik_dashboard_final_v1 as (
+select distinct max(dc_unified_id)   dc_unified_id, policy_no,coalesce (certificate_no,'00000000') certificate_no,pol_incept_date,pol_exp_date,
+max(presentaddress_city)   presentaddress_city,
+max(pstincomingstate)   pstincomingstate,
+max(customer_id)   customer_id,
+max(times_renewed_cnt)   times_renewed_cnt,
+max(renl_cert_no)   renl_cert_no,
+max(report_accounting_period)   report_accounting_period,
+max(proposal_no)   proposal_no,
+max(channel)   channel,
+case when sum( policy_cnt)>0 then 1 else sum( policy_cnt) end as  policy_cnt,
+max(sum_insured)   sum_insured,
+max(premiumamount)   premiumamount,
+max(total_premium)   total_premium,
+max(record_type_desc)   record_type_desc,
+max(producername)   producername,
+max(no_claim_bonus)   no_claim_bonus,
+max(veh_age)   veh_age,
+max(veh_body)   veh_body,
+max(veh_make)   veh_make,
+max(veh_model)   veh_model,
+max(segment_type)   segment_type,
+max(no_of_lives)   no_of_lives,
+max(policy_type)   policy_type,
+max(policy_variant)   policy_variant,
+max(hni_flag)   hni_flag,
+max(gender)   gender,
+max(marital_status)   marital_status,
+max(senior_citizen)   senior_citizen,
+max(age)   age,
+max(dependent_child)   dependent_child,
+max(dependent_parents)   dependent_parents,
+max(mobile_contactibility)   mobile_contactibility,
+max(email_contactibility)   email_contactibility,
+max(plan_type)   plan_type,
+max(ncb_flag)   ncb_flag,
+max(uw_discount)   uw_discount,
+max(uw_loading)   uw_loading,
+max(is_hni)   is_hni,
+max(tobacco_use_indicator_flag)   tobacco_use_indicator_flag,
+max(alcohol_use_indicator_flag)   alcohol_use_indicator_flag,
+max(accidental_deathrider_flag)   accidental_deathrider_flag,
+sum(claim_gross)   claim_gross,
+sum(claim_net)   claim_net,
+max(mfg_year)   mfg_year,
+max(product_name)   product_name,
+count(distinct claim_no) claim_cnt
+from customermart.qlik_dashboard_v_13 
+group by policy_no,coalesce (certificate_no,'00000000'),pol_incept_date,pol_exp_date)
+distributed  by (dc_unified_id)
+
+select * from  customermart.qlik_dashboard_v_13 where policy_no='3101273157'
+
+select distinct max(dc_unified_id)   dc_unified_id, policy_no,coalesce (certificate_no,'00000000') certificate_no,pol_incept_date,pol_exp_date,
+max(presentaddress_city)   presentaddress_city,
+max(pstincomingstate)   pstincomingstate,
+max(customer_id)   customer_id,
+max(policy_counter)   policy_counter,
+max(times_renewed_cnt)   times_renewed_cnt,
+max(renl_cert_no)   renl_cert_no,
+max(report_accounting_period)   report_accounting_period,
+max(proposal_no)   proposal_no,
+max(channel)   channel,
+case when sum( policy_cnt)>0 then 1 else sum( policy_cnt) end as  policy_cnt,
+max(sum_insured)   sum_insured,
+max(premiumamount)   premiumamount,
+max(total_premium)   total_premium,
+max(record_type_desc)   record_type_desc,
+max(producername)   producername,
+max(no_claim_bonus)   no_claim_bonus,
+max(veh_age)   veh_age,
+max(veh_body)   veh_body,
+max(veh_make)   veh_make,
+max(veh_model)   veh_model,
+max(segment_type)   segment_type,
+max(no_of_lives)   no_of_lives,
+max(policy_type)   policy_type,
+max(policy_variant)   policy_variant,
+max(hni_flag)   hni_flag,
+max(gender)   gender,
+max(marital_status)   marital_status,
+max(senior_citizen)   senior_citizen,
+max(age)   age,
+max(dependent_child)   dependent_child,
+max(dependent_parents)   dependent_parents,
+max(mobile_contactibility)   mobile_contactibility,
+max(email_contactibility)   email_contactibility,
+max(plan_type)   plan_type,
+max(accidentaldeathrider)   accidentaldeathrider,
+max(ncb_flag)   ncb_flag,
+max(uw_discount)   uw_discount,
+max(uw_loading)   uw_loading,
+max(is_hni)   is_hni,
+max(tobacco_use_indicator_flag)   tobacco_use_indicator_flag,
+max(alcohol_use_indicator_flag)   alcohol_use_indicator_flag,
+max(accidental_deathrider_flag)   accidental_deathrider_flag,
+sum(claim_gross)   claim_gross,
+sum(claim_net)   claim_net,
+max(mfg_year)   mfg_year,
+max(product_name)   product_name,
+count(distinct claim_no) claim_cnt
+from customermart.qlik_dashboard_v_13 
+group by policy_no,coalesce (certificate_no,'00000000'),pol_incept_date,pol_exp_date
+
+record_type_desc='CANCELLATION'
+
+where policy_no in ('3101610004','0177913283')
+
+select * from customermart.qlik_dashboard_v_13 where policy_no='6200473815'
+
+case when a.veh_age between 0 and 3 then '0 - 3 years'
+when a.veh_age between 4 and 5 then '4 - 5 years'
+when a.veh_age between 5 and 7 then '5 - 7 years'
+when a.veh_age between 7 and 10 then '7 - 10 years'
+when a.veh_age between 10 and 15 then '10 - 15 years'
+when a.veh_age >15 then 'Above 15 years'
+end veh_age_bucket,
+
+case  when base_sum_insured<500000 then 'Upto 5 lacs'
+when base_sum_insured between 500000 and 700000 then '5 - 7 lacs'
+when base_sum_insured between 700000 and 1000000 then '7 - 10 lacs'
+when base_sum_insured between 1000000 and 1500000 then '10 -15 lacs'
+when base_sum_insured between 1500000 and 2000000 then '15 - 20 lacs'
+when base_sum_insured between 2000000 and 3000000 then '20 - 30 lacs'
+when base_sum_insured between 3000000 and 4000000 then '30 - 40 lacs'
+when base_sum_insured between 4000000 and 6000000 then '40 - 60 lacs'
+when base_sum_insured between 6000000 and 8000000 then '60 - 80 lacs'
+when base_sum_insured between 8000000 and 10000000 then '80 lacs to 1 cr'
+when base_sum_insured> 10000000 then 'Above 1 cr'
+end sum_insured_bucket,
+case when exshowroomprice::float<500000 then 'Upto 5 lacs'
+when exshowroomprice::float between 500000 and 700000 then '5 - 7 lacs'
+when exshowroomprice::float between 700000 and 1000000 then '7 - 10 lacs'
+when exshowroomprice::float between 1000000 and 1500000 then '10 -15 lacs'
+when exshowroomprice::float between 1500000 and 2000000 then '15 - 20 lacs'
+when exshowroomprice::float between 2000000 and 3000000 then '20 - 30 lacs'
+when exshowroomprice::float between 3000000 and 4000000 then '30 - 40 lacs'
+when exshowroomprice::float between 4000000 and 6000000 then '40 - 60 lacs'
+when exshowroomprice::float between 6000000 and 8000000 then '60 - 80 lacs'
+when exshowroomprice::float between 8000000 and 10000000 then '80 lacs to 1 cr'
+when exshowroomprice::float> 10000000 then 'Above 1 cr'
+end exshowroomprice_bucket,
+case when a.premiumamount <8000 then 'Upto 8k'
+when a.premiumamount between 8000 and 15000 then '8k - 15k'
+when a.premiumamount between 15000 and 25000 then '15k - 25k'
+when a.premiumamount between 40000 and 60000 then '40k - 60k'
+when a.premiumamount between 60000 and 100000 then '60k - 1 lac'
+when a.premiumamount between 100000 and 150000 then '1 lac - 1.5 lac'
+when a.premiumamount between 150000 and 200000 then '1.5 lac - 2 lacs'
+when a.premiumamount  >200000 then 'Above 2 lacs'
+end premiumamount_bucket,
+case when a.total_premium <8000 then 'Upto 8k'
+when a.total_premium between 8000 and 15000 then '8k - 15k'
+when a.total_premium between 15000 and 25000 then '15k - 25k'
+when a.total_premium between 40000 and 60000 then '40k - 60k'
+when a.total_premium between 60000 and 100000 then '60k - 1 lac'
+when a.total_premium between 100000 and 150000 then '1 lac - 1.5 lac'
+when a.total_premium between 150000 and 200000 then '1.5 lac - 2 lacs'
+when a.total_premium >200000 then 'Above 2 lacs'
+end total_premium_bucket,
+
+
+select count(distinct  policy_no||','||certificate_no),dc_unified_id from customermart.qlik_dashboard_final_v1 
+group by dc_unified_id having count(distinct  policy_no||','||certificate_no)>1
+
+create table customermart.qlik_dashboard_final_v2 as (
+select a.dc_unified_id,a.policy_no,a.certificate_no,a.pol_incept_date,a.pol_exp_date,a.presentaddress_city,a.pstincomingstate,a.customer_id,
+a.times_renewed_cnt,a.renl_cert_no,a.report_accounting_period,a.proposal_no,a.channel,a.policy_cnt,a.sum_insured,a.premiumamount,a.total_premium,
+a.record_type_desc,a.producername,a.no_claim_bonus,a.veh_age,a.veh_body,a.veh_make,a.veh_model,a.segment_type,a.no_of_lives,a.policy_type,
+a.policy_variant,a.hni_flag,a.gender,a.marital_status,a.senior_citizen,a.age,a.dependent_child,a.dependent_parents,a.mobile_contactibility,
+a.email_contactibility,a.plan_type,a.ncb_flag,a.uw_discount,a.uw_loading,a.is_hni,a.tobacco_use_indicator_flag,a.alcohol_use_indicator_flag,
+a.accidental_deathrider_flag,a.claim_gross,a.claim_net,
+case when a.claim_gross>0 then a.claim_gross/a.total_premium end as glr,
+case when a.claim_net>0 then a.claim_net/a.premiumamount end as nlr,
+case when a.claim_gross>0 then 1 else 0 end as claimant_policy_flag,
+a.mfg_year,a.product_name,a.claim_cnt
+,decode(csec.dc_unified_id,null,0,1) cross_sell_eligible_cust,
+ps.final_buckets renewal_propensity
+from customermart.qlik_dashboard_final_v1 a
+left join customermart.cross_sell_eligible_cust csec on csec.dc_unified_id =a.dc_unified_id
+left join customermart.propensity_score ps on ps.policy_no =a.policy_no)
+distributed  by (dc_unified_id)
+
+
+select mfg_year,veh_age,pol_incept_date,extract (year from age(current_date,to_date(mfg_year,'yyyy'))) vehi_age_curr,
+extract (year from age(pol_incept_date,to_date(mfg_year,'yyyy'))) vehi_age_incept
+from customermart.qlik_dashboard_final_v2
+
+no_of_lives
+
+create table customermart.qlik_dashboard_finalv3 as (
+select a.dc_unified_id,a.policy_no,a.certificate_no,a.pol_incept_date,a.pol_exp_date,a.presentaddress_city,a.pstincomingstate,a.customer_id,
+a.times_renewed_cnt,a.renl_cert_no,a.report_accounting_period,a.proposal_no,a.channel,a.policy_cnt,a.sum_insured,a.premiumamount,a.total_premium,
+a.record_type_desc,a.producername,a.no_claim_bonus,a.veh_age,a.veh_body,a.veh_make,a.veh_model,a.segment_type,a.no_of_lives,a.policy_type,
+a.policy_variant,a.hni_flag,a.gender,a.marital_status,a.senior_citizen,a.age,a.dependent_child,a.dependent_parents,a.mobile_contactibility,
+a.email_contactibility,a.plan_type,a.ncb_flag,a.uw_discount,a.uw_loading,a.is_hni,a.tobacco_use_indicator_flag,a.alcohol_use_indicator_flag,
+a.accidental_deathrider_flag,a.claim_gross,a.claim_net,a.glr,a.nlr,a.claimant_policy_flag,a.mfg_year,a.product_name,a.claim_cnt,exshowroomprice,
+a.cross_sell_eligible_cust,a.renewal_propensity,
+case  when sum_insured<500000 then 'Upto 5 lacs'
+when sum_insured between 500000 and 700000 then '5 - 7 lacs'
+when sum_insured between 700000 and 1000000 then '7 - 10 lacs'
+when sum_insured between 1000000 and 1500000 then '10 -15 lacs'
+when sum_insured between 1500000 and 2000000 then '15 - 20 lacs'
+when sum_insured between 2000000 and 3000000 then '20 - 30 lacs'
+when sum_insured between 3000000 and 4000000 then '30 - 40 lacs'
+when sum_insured between 4000000 and 6000000 then '40 - 60 lacs'
+when sum_insured between 6000000 and 8000000 then '60 - 80 lacs'
+when sum_insured between 8000000 and 10000000 then '80 lacs to 1 cr'
+when sum_insured> 10000000 then 'Above 1 cr'
+end sum_insured_bucket,
+case when exshowroomprice::float<500000 then 'Upto 5 lacs'
+when exshowroomprice::float between 500000 and 700000 then '5 - 7 lacs'
+when exshowroomprice::float between 700000 and 1000000 then '7 - 10 lacs'
+when exshowroomprice::float between 1000000 and 1500000 then '10 -15 lacs'
+when exshowroomprice::float between 1500000 and 2000000 then '15 - 20 lacs'
+when exshowroomprice::float between 2000000 and 3000000 then '20 - 30 lacs'
+when exshowroomprice::float between 3000000 and 4000000 then '30 - 40 lacs'
+when exshowroomprice::float between 4000000 and 6000000 then '40 - 60 lacs'
+when exshowroomprice::float between 6000000 and 8000000 then '60 - 80 lacs'
+when exshowroomprice::float between 8000000 and 10000000 then '80 lacs to 1 cr'
+when exshowroomprice::float> 10000000 then 'Above 1 cr'
+end exshowroomprice_bucket,
+case when a.premiumamount <8000 then 'Upto 8k'
+when a.premiumamount between 8000 and 15000 then '8k - 15k'
+when a.premiumamount between 15000 and 25000 then '15k - 25k'
+when a.premiumamount between 25000 and 40000 then '25k - 40k'
+when a.premiumamount between 40000 and 60000 then '40k - 60k'
+when a.premiumamount between 60000 and 100000 then '60k - 1 lac'
+when a.premiumamount between 100000 and 150000 then '1 lac - 1.5 lac'
+when a.premiumamount between 150000 and 200000 then '1.5 lac - 2 lacs'
+when a.premiumamount  >200000 then 'Above 2 lacs'
+end premiumamount_bucket,
+case when a.total_premium <8000 then 'Upto 8k'
+when a.total_premium between 8000 and 15000 then '8k - 15k'
+when a.total_premium between 15000 and 25000 then '15k - 25k'
+when a.total_premium between 25000 and 40000 then '25k - 40k'
+when a.total_premium between 40000 and 60000 then '40k - 60k'
+when a.total_premium between 60000 and 100000 then '60k - 1 lac'
+when a.total_premium between 100000 and 150000 then '1 lac - 1.5 lac'
+when a.total_premium between 150000 and 200000 then '1.5 lac - 2 lacs'
+when a.total_premium >200000 then 'Above 2 lacs' end as total_premium_bucket,
+case when uw_discount::float between 0 and 30 then '0-30'
+when uw_discount::float between 31 and 45 then '31-45'
+when uw_discount::float between 46 and 55 then '46-55'
+when uw_discount::float between 55 and 60 then '55-60'
+when uw_discount::float between 61 and 65 then '61-65'
+when uw_discount::float between 66 and 70 then '66-70'
+when uw_discount::float between 71 and 75 then '71-75'
+when uw_discount::float between 76 and 80 then '76-80'
+when uw_discount::float >80 then 'Above 80' end uw_discount_bucket,
+case 
+when  times_renewed_cnt::int between 0 and 3 then '0 - 3 years'
+when  times_renewed_cnt::int between 4 and 5 then '4 - 5 years'
+when  times_renewed_cnt::int between 5 and 7 then '5 - 7 years'
+when  times_renewed_cnt::int between 7 and 10 then '7 - 10 years'
+when  times_renewed_cnt::int between 10 and 15 then '10 - 15 years'
+when  times_renewed_cnt::int>15 then 'Above 15 years'
+end as times_renewed_cnt_bucket,
+case
+when  age between 0 and 18 then '0 - 18 years'
+when  age between 19 and 25 then '19 - 25 years'
+when  age between 25 and 35 then '25 - 35 years'
+when  age between 36 and 45 then '36 - 45 years'
+when  age between 46 and 50 then '46 - 50 years'
+when  age between 51 and 55 then '51 - 55 years'
+when  age between 56 and 60 then '56 - 60 years'
+when  age between 61 and 65 then '61 - 65 years'
+when  age between 66 and 70 then '66 - 70 years'
+when  age>71 then '71+ years' end  as age_bucket
+from  customermart.qlik_dashboard_final_v2 a left join(select reference_num ,exshowroomprice::float from public.policy_dh_risk_headers_mot) c on
+a.proposal_no =c.reference_num)
+distributed  by (dc_unified_id)
+
+
+select * from customermart.qlik_dashboard_finalv3
+
+
+
+
+
+case  when base_sum_insured<500000 then 'Upto 5 lacs'
+when base_sum_insured between 500000 and 700000 then '5 - 7 lacs'
+when base_sum_insured between 700000 and 1000000 then '7 - 10 lacs'
+when base_sum_insured between 1000000 and 1500000 then '10 -15 lacs'
+when base_sum_insured between 1500000 and 2000000 then '15 - 20 lacs'
+when base_sum_insured between 2000000 and 3000000 then '20 - 30 lacs'
+when base_sum_insured between 3000000 and 4000000 then '30 - 40 lacs'
+when base_sum_insured between 4000000 and 6000000 then '40 - 60 lacs'
+when base_sum_insured between 6000000 and 8000000 then '60 - 80 lacs'
+when base_sum_insured between 8000000 and 10000000 then '80 lacs to 1 cr'
+when base_sum_insured> 10000000 then 'Above 1 cr'
+end sum_insured_bucket,
+case when exshowroomprice::float<500000 then 'Upto 5 lacs'
+when exshowroomprice::float between 500000 and 700000 then '5 - 7 lacs'
+when exshowroomprice::float between 700000 and 1000000 then '7 - 10 lacs'
+when exshowroomprice::float between 1000000 and 1500000 then '10 -15 lacs'
+when exshowroomprice::float between 1500000 and 2000000 then '15 - 20 lacs'
+when exshowroomprice::float between 2000000 and 3000000 then '20 - 30 lacs'
+when exshowroomprice::float between 3000000 and 4000000 then '30 - 40 lacs'
+when exshowroomprice::float between 4000000 and 6000000 then '40 - 60 lacs'
+when exshowroomprice::float between 6000000 and 8000000 then '60 - 80 lacs'
+when exshowroomprice::float between 8000000 and 10000000 then '80 lacs to 1 cr'
+when exshowroomprice::float> 10000000 then 'Above 1 cr'
+end exshowroomprice_bucket,
+case when a.premiumamount <8000 then 'Upto 8k'
+when a.premiumamount between 8000 and 15000 then '8k - 15k'
+when a.premiumamount between 15000 and 25000 then '15k - 25k'
+when a.premiumamount between 40000 and 60000 then '40k - 60k'
+when a.premiumamount between 60000 and 100000 then '60k - 1 lac'
+when a.premiumamount between 100000 and 150000 then '1 lac - 1.5 lac'
+when a.premiumamount between 150000 and 200000 then '1.5 lac - 2 lacs'
+when a.premiumamount  >200000 then 'Above 2 lacs'
+end premiumamount_bucket,
+case when a.total_premium <8000 then 'Upto 8k'
+when a.total_premium between 8000 and 15000 then '8k - 15k'
+when a.total_premium between 15000 and 25000 then '15k - 25k'
+when a.total_premium between 40000 and 60000 then '40k - 60k'
+when a.total_premium between 60000 and 100000 then '60k - 1 lac'
+when a.total_premium between 100000 and 150000 then '1 lac - 1.5 lac'
+when a.total_premium between 150000 and 200000 then '1.5 lac - 2 lacs'
+when a.total_premium >200000 then 'Above 2 lacs'
+end total_premium_bucket,
+
+
+create table customermart.qlik_dashboard_final_v4 as (
+select a.dc_unified_id golden_id,a.policy_no,a.certificate_no,a.pol_incept_date,a.pol_exp_date,a.presentaddress_city,a.pstincomingstate,a.customer_id,
+a.times_renewed_cnt,a.renl_cert_no,a.report_accounting_period,a.proposal_no,a.channel,a.policy_cnt,a.sum_insured,a.premiumamount,a.total_premium,
+a.record_type_desc,a.producername,a.no_claim_bonus,a.veh_age,a.veh_body,a.veh_make,a.veh_model,a.segment_type,a.no_of_lives,a.policy_type,
+a.policy_variant,a.hni_flag,a.gender,a.marital_status,a.senior_citizen,a.age,a.dependent_child,a.dependent_parents,a.mobile_contactibility,
+a.email_contactibility,a.plan_type,a.ncb_flag,a.uw_discount,a.uw_loading,a.is_hni,a.tobacco_use_indicator_flag,a.alcohol_use_indicator_flag,
+a.accidental_deathrider_flag,a.claim_gross,a.claim_net,a.glr,a.nlr,a.claimant_policy_flag,a.mfg_year,a.product_name,a.claim_cnt,a.exshowroomprice,
+a.cross_sell_eligible_cust,a.renewal_propensity,a.sum_insured_bucket,a.exshowroomprice_bucket,a.premiumamount_bucket,a.total_premium_bucket,
+a.uw_discount_bucket,a.times_renewed_cnt_bucket,a.age_bucket,to_char(pol_exp_date,'MON-YY') policy_expiry_month,d.policy_per_golden_id,
+case when renewal_propensity like 'RH%' then 'Segment 1'
+when renewal_propensity like 'RM%' then 'Segment 2'
+when renewal_propensity like 'RL%' then 'Segment 3'
+when renewal_propensity like 'CM%' then 'Segment 4'
+when renewal_propensity like 'CH%' then 'Segment 5'
+end renewal_propensity_segment,c.pa_si,c.discount_per
+from customermart.qlik_dashboard_finalv3 a
+left join(select reference_num,pa_si,discount_per from public.policy_dh_risk_headers_mot) c on
+a.proposal_no =c.reference_num
+left join(select count(distinct policy_no||','||coalesce (certificate_no)) policy_per_golden_id,dc_unified_id,times_renewed_cnt from customermart.qlik_dashboard_finalv3 group by dc_unified_id,times_renewed_cnt) d
+on a.dc_unified_id=d.dc_unified_id and a.times_renewed_cnt=d.times_renewed_cnt)
+distributed  by (golden_id)
+
+
+select ncb_discount from public.policy_dh_risk_headers_mot where ncb_discount is not null and ncb_discount!='0'
+
+
+select count(policy_no||','||certificate_no) from customermart.qlik_dashboard_final_v4
+
+select sum(policy_cnt) policy_per_golden_id,dc_unified_id,to_char(report_accounting_period,'yyyy')
+from customermart.qlik_dashboard_finalv3 where dc_unified_id='81556841'
+group by dc_unified_id,to_char(report_accounting_period,'yyyy')
+
+select distinct policy_cnt from customermart.qlik_dashboard_final_v3 --where policy_cnt=-4-- order by policy_no desc
+
+
+update customermart.qlik_dashboard_final_v4  set policy_cnt=-1 where policy_cnt<0
+
+create table customermart.qlik_dashboard_final_v5 as (
+select distinct golden_id,a.policy_no,a.certificate_no,a.pol_incept_date,a.pol_exp_date,mmp.pstincomingcity city ,a.pstincomingstate state,a.customer_id,a.times_renewed_cnt,
+a.report_accounting_period,a.proposal_no,a.channel,a.policy_cnt,a.sum_insured,a.premiumamount,a.total_premium,a.veh_age,a.veh_body,a.veh_make,
+a.veh_model,a.segment_type,a.no_of_lives,a.hni_flag,a.gender,a.marital_status,a.senior_citizen,a.age,a.dependent_child,a.dependent_parents,
+a.mobile_contactibility,a.email_contactibility,a.plan_type,a.ncb_flag,a.uw_discount,a.is_hni,a.tobacco_use_indicator_flag,a.alcohol_use_indicator_flag,
+a.accidental_deathrider_flag,a.claim_gross,a.claim_net,a.glr,a.nlr,a.claimant_policy_flag,a.product_name,a.claim_cnt,a.exshowroomprice,
+a.cross_sell_eligible_cust,a.renewal_propensity,a.sum_insured_bucket,a.exshowroomprice_bucket,a.premiumamount_bucket,a.total_premium_bucket,
+a.uw_discount_bucket,a.times_renewed_cnt_bucket,a.age_bucket,a.policy_expiry_month,a.renewal_propensity_segment,a.pa_si,a.discount_per
+,c.ncb_discount::float, nlr
+case when c.ncb_discount::float between 0 and 10 then '0-10'
+when c.ncb_discount::float between 10 and 25 then '10-25'
+when c.ncb_discount::float between 25 and 50 then '25-50'
+when c.ncb_discount::float between 50 and 75 then '50-75'
+when c.ncb_discount::float >75 then '>75' end ncb_discount_bucket
+from customermart.qlik_dashboard_final_v4 a left join (select reference_num,ncb_discount from public.policy_dh_risk_headers_mot) c on
+a.proposal_no =c.reference_num 
+left join public.mastercraft_master_prod mmp on mmp.dc_unified_id=a.golden_id)
+distributed  by (golden_id)
+
+record_type
+
+
+select * from customermart.qlik_dashboard_v_13 where policy_no='6200585129'
+
+
+select  count(policy_no||','||certificate_no),product_name from customermart.qlik_dashboard_final_v5 where pol_exp_date>current_date
+and ()
+group by product_name 
+
+
+select * from customermart.qlik_dashboard_final_v6 where policy_no='0190012310'
+
+
+group by golden_id
+having count(distinct policy_no||','||certificate_no)>5
+
+select proposal_no,record_type_desc,policy_no,certificate_no,binddate,business_type,txt_business_type,business_type_health,pol_status_cd ,"timestamp" 
+from datamarts.sales_all_details where policy_no in 
+('0190012310')
+
+select distinct status, trans_id from public.underwriting_gc_cnfgtr_d_all_transactions where trans_id in (
+select distinct proposal_no from (
+select proposal_no,record_type_desc,policy_no,certificate_no,binddate,row_number() over(partition by policy_no,certificate_no order by binddate desc) rn
+from datamarts.sales_all_details
+where policy_no||','||certificate_no in (select policy_no||','||certificate_no
+from customermart.qlik_dashboard_final_v6 where policy_cnt=0)) as a where rn=1
+and record_type_desc ='CANCELLATION') 
+
+drop table customermart.customercoe_dashboard
+
+create table customermart.customercoe_dashboard_v1 as (
+select golden_id,policy_no,certificate_no,pol_incept_date,pol_exp_date,city,state,customer_id,times_renewed_cnt,report_accounting_period,proposal_no,
+channel,decode(policy_cnt,0,-1,policy_cnt),sum_insured,
+premiumamount,
+total_premium,
+veh_age,veh_body,veh_make,veh_model,segment_type,no_of_lives,hni_flag,gender,marital_status,
+senior_citizen,age,dependent_child,dependent_parents,mobile_contactibility,email_contactibility,plan_type,ncb_flag,uw_discount,is_hni,
+tobacco_use_indicator_flag,alcohol_use_indicator_flag,accidental_deathrider_flag,claim_gross,claim_net,glr,nlr,claimant_policy_flag,product_name,
+claim_cnt,exshowroomprice,cross_sell_eligible_cust,renewal_propensity,sum_insured_bucket,exshowroomprice_bucket,premiumamount_bucket,
+total_premium_bucket,uw_discount_bucket,times_renewed_cnt_bucket,age_bucket,policy_expiry_month,renewal_propensity_segment,pa_si,discount_per,
+ncb_discount,ncb_discount_bucket
+from customermart.qlik_dashboard_final_v6)
+distributed by (golden_id)
+
+--update customermart.customercoe_dashboard_v1 set sum_insured=0,premiumamount=0,total_premium=0 where policy_cnt=-1
+
+select * from customermart.experian_dob_analysis1
+
+analyze customermart.lob_channel_crosssell
+
+
+select distinct record_type_desc,count(policy_no||','||certificate_no) from (
+select record_type_desc,policy_no,certificate_no,binddate,row_number() over(partition by policy_no,certificate_no order by binddate desc) rn,bu
+from datamarts.sales_all_details
+where policy_no||','||certificate_no in (select policy_no||','||certificate_no
+from customermart.qlik_dashboard_final_v5 where policy_cnt=0)) as a where rn=1
+group by record_type_desc
+
+drop table customermart.qlik_dashboard_final_v6
+
+create table customermart.qlik_dashboard_final_v6 as (
+select a.*,temp.record_type_desc record_type_desc_new,temp.sum_insured sum_insured_new ,temp.premiumamount premiumamount_new,
+temp.total_premium total_premium_new from 
+customermart.qlik_dashboard_final_v5 a left join(
+select * from (select record_type_desc,policy_no,certificate_no,binddate,total_premium,premiumamount,sum_insured,pol_incept_date,pol_exp_date,
+row_number() over(partition by policy_no,coalesce (certificate_no,'0'),pol_incept_date,pol_exp_date order by binddate desc) rn
+from datamarts.sales_all_details
+where policy_no||','||certificate_no in (select policy_no||','||certificate_no
+from customermart.qlik_dashboard_final_v5 )) as a  where rn=1) temp on temp.policy_no=a.policy_no 
+and coalesce (temp.certificate_no,'0')=coalesce (a.certificate_no,'0') and a.pol_incept_date=temp.pol_incept_date and temp.'202108120070894',
+'202206030077327',
+'202111220115387',
+'202208010101140',
+'202109190037535',
+'202105260095436',
+'202302070193191',
+'202211300502534',
+'202104280099923',
+'202203140197877',
+'202210150270968',
+'202207040215287',
+'202207160178857',
+'202208180057147',
+'202107020034396',
+'202207010185754',
+'202112030006873',
+'202210070000015',
+'202202070073469',
+'202110070163423',
+'202212010263939',
+'202107230116859',
+'202105070146932',
+'202105130075126',
+'202106030108839',
+'202206030013654',
+'202107020114269',
+'202109200184004',
+'202207120125661',
+'202108030145050',
+'202104230043487',
+'202209230271221',
+'202204070140241',
+'202106160103996',
+'202302020058222',
+'202210210304961',
+'202207290269071',
+'202211020223849',
+'202212170179012',
+'202301280191480',
+'202203220260612',
+'202108270094718',
+'202206030075270',
+'202106030072186',
+'202207020085386',
+'202212260236717',
+'202204150040688',
+'202202040065228',
+'202106110108640',
+'202106160127814',
+'202206230087297',
+'202208290293352',
+'202103300154408',
+'202206210471093',
+'202207180159154',
+'202108030068540',
+'202112280210894',
+'202212060341674',
+'202107290118547',
+'202207050077265',
+'202212010346676',
+'202111230096323'=a.pol_exp_date )
+distributed  by (golden_id)
+
+
+select policy_no,certificate_no,record_type_desc_new from  customermart.qlik_dashboard_final_v6
+where policy_cnt=0
+ 
+--pdate  customermart.qlik_dashboard_final_v6 set policy_cnt=-1 where policy_cnt=0 and record_type_desc_new='CANCELLATION'
+
+select distinct table_name from information_schema.columns c where column_name like '%transaction%type%' 
+and table_schema ='public' and
+table_name not like '%prt%' and table_name not like '%spark%'
+
+Cnfgtr_d_transaction join it with genmst_prop_stat
+
+
+select * from public.underwriting_gc_cnfgtr_d_all_transactions where trans_id =''
+
+
+select * from underwriting_dh_cnfgtr_riskgrid_dlts_tab where txt_master_pol_number='177920056'
+
+select policy_no,policy_counter,"timestamp",record_type_desc,record_type_desc_biu,business_type,txt_business_type,business_type_health 
+from registers.premium_register pr where policy_no ='0287750821'
+
+select policy_no,policy_counter,binddate ,record_type_desc,business_type,txt_business_type,business_type_health 
+from datamarts.sales_all_details sad  where policy_no ='0287750821'
+
+select * from customermart.qlik_dashboard_final_v6 where premiumamount_new<0 and record_type_desc_new!='CANCELLATION'
+
+--update customermart.qlik_dashboard_final_v6 set policy_cnt=-1 where policy_no||','||certificate_no||','||pol_incept_date||','||pol_exp_date in(
+select policy_no||','||certificate_no||','||pol_incept_date||','||pol_exp_date 
+from datamarts.sales_all_details sad where 
+
+proposal_no in ('202108120070894',
+'202206030077327',
+'202111220115387',
+'202208010101140',
+'202109190037535',
+'202105260095436',
+'202302070193191',
+'202211300502534',
+'202104280099923',
+'202203140197877',
+'202210150270968',
+'202207040215287',
+'202207160178857',
+'202208180057147',
+'202107020034396',
+'202207010185754',
+'202112030006873',
+'202210070000015',
+'202202070073469',
+'202110070163423',
+'202212010263939',
+'202107230116859',
+'202105070146932',
+'202105130075126',
+'202106030108839',
+'202206030013654',
+'202107020114269',
+'202109200184004',
+'202207120125661',
+'202108030145050',
+'202104230043487',
+'202209230271221',
+'202204070140241',
+'202106160103996',
+'202302020058222',
+'202210210304961',
+'202207290269071',
+'202211020223849',
+'202212170179012',
+'202301280191480',
+'202203220260612',
+'202108270094718',
+'202206030075270',
+'202106030072186',
+'202207020085386',
+'202212260236717',
+'202204150040688',
+'202202040065228',
+'202106110108640',
+'202106160127814',
+'202206230087297',
+'202208290293352',
+'202103300154408',
+'202206210471093',
+'202207180159154',
+'202108030068540',
+'202112280210894',
+'202212060341674',
+'202107290118547',
+'202207050077265',
+'202212010346676',
+'202111230096323'))
+
+
+select * from customermart.qlik_dashboard_final_v6 where policy_cnt=0
