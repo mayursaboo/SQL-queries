@@ -1,0 +1,34 @@
+create table customermart.temp_health_and_vehicle_1 as (
+select distinct a.dc_unified_id, a.mobile_primary,a.mobile_secondary, a.email_primary, a.email_secondary,
+a.first_name, a.last_name, a.presentaddress_city, a.psnt_address_zip, 
+sd.policy_no, sd.certificate_no, sd.binddate, sd.record_type_desc, sd.record_type_cd, sd.pol_exp_date, sd.pol_incept_date, 
+sd.renl_cert_no, sd.times_renewed_cnt, sd.proposal_no, sd.lob, sd.no_of_lives, sd.channel, sd.channel_new_2, sd.product_name, sd.product_cd
+from datamarts.sales_all_details sd
+join (select mmp.dc_unified_id, mmp.mobile_primary, mmp.mobile_secondary, mmp.email_primary, mmp.email_secondary, 
+mmp.first_name, mmp.last_name, mmp.presentaddress_city, mmp.psnt_address_zip,
+mbdp.source_customer_id from public.mastercraft_bulk_detail_prod mbdp join 
+public.mastercraft_master_prod mmp on mbdp.dc_unified_id = mmp.dc_unified_id where mmp.dc_active_flag=1) a 
+on sd.ins_name_client_no = a.source_customer_id
+where sd.channel_new_2 = 'E-Business'
+and sd.lob in ('Health Benefit', 'Mediseries', 'Pvt Car')
+and sd.pol_exp_date > current_date)
+
+select distinct dc_unified_id, mobile_Primary as contact1, mobile_secondary as contact2, email_primary as email1, 
+email_secondary as email2, lob, first_name, last_name , no_of_lives as member_covered, psnt_address_zip as pincode, 
+presentaddress_city as city, times_renewed_cnt as number_of_renewals
+from (select *, row_number() over (partition by policy_no, coalesce(certificate_no,'0') order by binddate desc, proposal_no desc) rn 
+from customermart.temp_health_and_vehicle_1
+where lob in ('Health Benefit', 'Mediseries')) 
+as a where record_type_desc != 'CANCELLATION'
+and rn = 1 and pol_exp_date > current_date 
+and times_renewed_cnt >= 1
+
+select distinct dc_unified_id, mobile_Primary as contact1, mobile_secondary as contact2, email_primary as email1, 
+email_secondary as email2, lob, first_name, last_name , no_of_lives as member_covered, psnt_address_zip as pincode, 
+presentaddress_city as city, times_renewed_cnt as number_of_renewals
+from (select *, row_number() over (partition by policy_no, coalesce(certificate_no,'0') order by binddate desc, proposal_no desc) rn 
+from customermart.temp_health_and_vehicle_1
+where lob in ('Pvt Car')) 
+as a where record_type_desc != 'CANCELLATION'
+and rn = 1 and pol_exp_date > current_date 
+and times_renewed_cnt >= 1
