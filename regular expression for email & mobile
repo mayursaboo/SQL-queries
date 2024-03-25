@@ -1,0 +1,15 @@
+select customer_code, email as email from public.customer_gc_genmst_customer cggc 
+where email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$'
+and customer_code in
+
+
+
+select source_system_customer_id, value, source_system_name from customermart.contactability 
+where communication_sub_type = 'email' 
+and value ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$'
+and source_system_customer_id in
+
+
+reg ex for mobile
+
+rlike('^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6-9]\d{9}$')
