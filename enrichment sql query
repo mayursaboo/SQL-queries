@@ -1,0 +1,31 @@
+create table customermart.auto_sept_23_mob1 as (
+select t.client_no, t.policy_no, t.policy_exp_date , t.email_id ,
+m.phone, m.phone_no, m.sourc, m.source_name
+from customermart.auto_sept_23_mob t
+cross join lateral (values (t.lead_phone1, 'phone1', t."csource1", 'sourc1'),
+(t.lead_phone2, 'phone2', t."csource2", 'sourc2'), (t.lead_phone3, 'phone3', t."csource3", 'sourc3'),
+(t.lead_phone4, 'phone4', t."csource4", 'sourc4'),(t.lead_phone5, 'phone5', t."csource5", 'sourc5'),
+(t.lead_phone6, 'phone6', t."csource6", 'sourc6'),(t.lead_phone7, 'phone7', t."csource7", 'sourc7'),
+(t.lead_phone8, 'phone8', t."csource8", 'sourc8'),(t.lead_phone9, 'phone9', t."csource9", 'sourc9'),
+(t.lead_phone10, 'phone10', t."csource10", 'sourc10')) as m(phone_no, phone, source_name, sourc)
+where phone_no != '')
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+create table customermart.auto_sept_23_mob2 as (
+select distinct client_no, phone_no from (
+select asm1.client_no, asm1.policy_no, asm1.policy_exp_date ,asm1.email_id, asm1.phone_no ,
+asm1.source_name,c.communication_sub_type , c.value
+from customermart.auto_sept_23_mob1 asm1
+left join customermart.contactability c
+on asm1.client_no = c.source_system_customer_id 
+and asm1.phone_no = c.value and c.communication_sub_type = 'mobile' and trim(asm1.phone_no)!= ''
+where value is null) as a
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+
+select distinct client_no, phone_no from customermart.auto_sept_23_mob2 asm2
+where phone_no in (select mobile_primary from public.mastercraft_bulk_detail_prod mbdp
+where asm2.client_no = mbdp.source_customer_id) or 
+phone_no in (select mobile_secondary from public.mastercraft_bulk_detail_prod mbdp
+where asm2.client_no = mbdp.source_customer_id)
