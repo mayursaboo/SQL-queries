@@ -1,0 +1,30 @@
+=IFERROR(IF(VLOOKUP(S3,df1_new.xlsx!A$2:C$399,2,FALSE)=0,"",VLOOKUP(S3,df1_new.xlsx!A$2:C$399,2,FALSE)),"Not Available")
+
+=VLOOKUP(S3,df3_new.xlsx!A$2:K$345,8,FALSE)
+
+
+=IFERROR(IF(VLOOKUP(S3,df3_new.xlsx!A$2:F$345,2,FALSE)=0,"",VLOOKUP(S3,df3_new.xlsx!A$2:F$345,2,FALSE)),"Not Available")
+
+
+=IFERROR(IF(VLOOKUP(S3,df3_new.xlsx!A$2:K$345,7,FALSE)=0,"",VLOOKUP(S3,df3_new.xlsx!A$2:K$345,7,FALSE)),"Not Available")
+
+
+=IFERROR(IF(=0,"",,"Not Available")
+
+
+=IFERROR(IF(VLOOKUP(S3,df2_new.xlsx!A$2:C$291,2,FALSE)=0,"",=VLOOKUP(S3,df2_new.xlsx!A$2:C$291,2,FALSE),"Not Available")
+
+
+=IFERROR(IF(VLOOKUP(S3,df4_new.xlsx!A$2:G$223,2,FALSE)=0,"",VLOOKUP(S3,df4_new.xlsx!A$2:G$223,2,FALSE)),"Not Available")
+
+=IF(B6>0,B$4&",",IF(C6>0,C$4&",",IF(D6>0,D$4&",",IF(E6>0,E$4&",",IF(F6>0,F$4&",",IF(G6>0,G$4&",",IF(H6>0,H$4&",",IF(J6>0,J$4&",",IF(K6>0,K$4&",",IF(L6>0,L$4&",",IF(M6>0,M$4&",",IF(N6>0,N$4))))))))))))
+
+
+
+
+known issue due to regular expression, code fix has been done, it will get resolved after 1 full ,load
+
+
+present in customer360
+Invalid Email
+since it is not in mastercraft, so not available in C360
