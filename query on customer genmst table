@@ -1,0 +1,127 @@
+Column	genmst_Column_name	Count (ind_corp_flag='I')
+Driving_License1	driving_license_no	 
+Driving_License2	txt_driving_license	 
+PAN	tax_1_id	 
+VoterID	txt_voter_id	 
+Passport1	passport_no	 
+Passport2	txt_passport	 
+
+
+select count(distinct driving_license_no) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+select count(distinct customer_code),to_char(tgt_commit_timestamp, 'Mon-YYYY')
+from (select customer_code, tax_1_id, tgt_commit_timestamp
+from public.customer_gc_genmst_customer 
+where tax_1_id is not null and tgt_commit_timestamp >= '2023-01-01' 
+and tgt_commit_timestamp <= '2023-06-30') A 
+group by to_char(tgt_commit_timestamp, 'Mon-YYYY')
+
+
+------ tax_1_id ----
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id ~ '^[A-Z][A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][A-Z]'
+
+ 
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+
+
+------- txt_driving_license -------
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_driving_license is not null
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_driving_license is not null and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and tax_1_id !~ '^[A-Z][A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][A-Z]'
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and substring(tax_1_id, 4,1) != 'P'
+
+------ txt_voter_id---------
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_voter_id is not null
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_voter_id is not null and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+-----------passport_no-----------
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and passport_no is not null
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and passport_no is not null and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+
+----------txt_passport-------------
+
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_passport is not null
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_passport is not null and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+
+----------txt_ckyc----------------
+
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_ckyc is not null
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and txt_ckyc is not null and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and length(tax_1_id) != 10
+
+
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and length(tax_1_id) != 10 and dat_insert_date >= '2023-01-01' 
+and dat_insert_date <= '2023-07-14'
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and tax_1_id substring(tax_1_id) '^[A-Z][A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][A-Z]'
+
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and tax_1_id !~ '^[A-Z][A-Z][A-Z][A-Z][A-Z][0-9][0-9][0-9][0-9][A-Z]' 
+and dat_insert_date >= '2023-01-01' and dat_insert_date <= '2023-07-14'
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and substring(tax_1_id, 4,1) != 'P' and substring(tax_1_id, 4,1) != 'p' 
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and substring(tax_1_id, 4,1) != 'P' and substring(tax_1_id, 4,1) != 'p' 
+and dat_insert_date >= '2023-01-01' and dat_insert_date <= '2023-07-14'
+
+select count(distinct customer_code) from public.customer_gc_genmst_customer
+where ind_corp_flag = 'I' and tax_1_id is not null and tax_1_id !~ '^[A-Z][A-Z][A-Z][P][A-Z][0-9][0-9][0-9][0-9][A-Z]'
+
+
+
+
+
