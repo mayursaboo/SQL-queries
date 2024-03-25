@@ -1,0 +1,220 @@
+create table customermart.temp_pol_retail_001 as (
+select policy_number, reference_num, source_system_name, pol_incept_date, pol_exp_date, veh_model, veh_age, veh_make, veh_body,
+veh_engine_no, veh_chassis_no , veh_no, mfg_year, commit_timestamp 
+from customermart.policy_retail 
+where veh_model is null or veh_age is null or veh_make is null or veh_body  is null or 
+veh_engine_no is null or veh_chassis_no is null or veh_no is null or mfg_year is null)
+
+update customermart.temp_pol_retail_001 
+set veh_model = b.model,
+	veh_age = c.vehicle_age,
+	veh_make = b.make,
+	veh_body = c.subtype_body,
+	veh_engine_no = b.engine_no,
+	veh_chassis_no = b.chassis_no,
+	mfg_year = b.year_of_manufacture,
+	veh_no = upper(concat_ws('',c.registration_number,c.registrationnumber2, c.registrationnumber3,c.registrationnumber4))
+from customermart.temp_pol_retail_001 as a, public.policy_dh_risk_details_mot as b 
+join public.policy_dh_risk_headers_mot as c
+on a.reference_num = c.reference_num 
+where a.reference_num = b.reference_num 
+
+
+update customermart.temp_pol_retail_001 
+set veh_model = b.model,
+	veh_make = b.make,
+	veh_engine_no = b.engine_no,
+	veh_chassis_no = b.chassis_no,
+	mfg_year = b.year_of_manufacture,
+from customermart.temp_pol_retail_001 as a 
+join public.policy_dh_risk_details_mot as b 
+on a.reference_num = b.reference_num
+where a.veh_model is null or a.veh_make is null 
+or a.veh_engine_no is null or a.mfg_year is null
+
+
+
+update customermart.temp_pol_retail_001
+set veh_age = c.vehicle_age,
+	veh_body = c.subtype_body,
+	veh_no = upper(concat_ws('',c.registration_number,c.registrationnumber2, c.registrationnumber3,c.registrationnumber4))
+from customermart.temp_pol_retail_001 as a 
+join public.policy_dh_risk_headers_mot as c 
+on a.reference_num = c.reference_num
+where a.veh_age is null or a.veh_body is null 
+or a.veh_no is null
+
+
+update customermart.temp_pol_retail_001 
+set veh_model = coalesce(a.veh_model,b.model),
+	veh_make = coalesce(a.veh_make, b.make),
+	veh_engine_no = coalesce(a.veh_engine_no, b.engine_no),
+	veh_chassis_no = coalesce(a.veh_chassis_no, b.chassis_no),
+	mfg_year = coalesce(a.mfg_year,b.year_of_manufacture)
+from customermart.temp_pol_retail_001 as a 
+join public.policy_dh_risk_details_mot as b 
+on a.reference_num = b.reference_num
+where a.veh_model is null or a.veh_make is null 
+or a.veh_engine_no is null or a.mfg_year is null
+
+
+
+update customermart.temp_pol_retail_001
+set veh_model = c.model,
+	veh_make = c.manufacturer, 
+	veh_engine_no = c.engine_number, 
+	veh_chassis_no = c.chassis_number, 
+	veh_age = cast(c.vehicle_age as int),
+	veh_body = c.type_of_body,
+	veh_no = upper(concat_ws('',c.registration_number,c.registrationnumber2, c.registrationnumber3,c.registrationnumber4)),
+	mfg_year = c.yr_of_manf 
+from customermart.temp_pol_retail_001 as a 
+join (select reference_num, model, manufacturer, engine_number, chassis_number,
+cast(vehicle_age as int), type_of_body ,registration_number,registrationnumber2, registrationnumber3,registrationnumber4,yr_of_manf, 
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn  from public.policy_dh_risk_headers_mot) as c 
+on a.reference_num = c.reference_num and c.rn=1
+where a.veh_model is null or a.veh_make is null or a.veh_engine_no is null or 
+a.veh_chassis_no is null or a.veh_age is null or a.veh_body is null 
+or a.veh_no is null or a.mfg_year is null 
+
+
+
+update customermart.temp_pol_retail_002
+set veh_model = c.model,
+	veh_make = c.manufacturer, 
+	veh_engine_no = c.engine_number, 
+	veh_chassis_no = c.chassis_number, 
+	veh_age = c.vehicle_age,
+	veh_body = c.type_of_body,
+	mfg_year = c.yr_of_manf,
+	veh_no = case 
+				when a.product_cd = '3121' then upper(concat_ws('',c.registration_number,c.registrationnumber2, c.registrationnumber3,c.registrationnumber4))
+				when a.product_cd = '3124' then upper(concat_ws('',c.rgsno1,c.rgsno2,c.rgsno3,c.rgsno4))
+				when a.product_cd = '3122' then upper(concat_ws('',c.registrationnumbersection1, c.registrationnumbersection2, c.registrationnumbersection3, c.registrationnumbersection4))
+				when a.product_cd = '3184' then upper(concat_ws('',c.registrationnumbersection1, c.registrationnumbersection2, c.registrationnumbersection3, c.registrationnumbersection4))
+				else null 
+			 end
+from customermart.temp_pol_retail_002 as a 
+join (select reference_num, model, manufacturer, engine_number, chassis_number,
+vehicle_age::int, type_of_body ,registration_number,registrationnumber2, registrationnumber3,registrationnumber4,
+rgsno1 , rgsno2, rgsno3, rgsno4, registrationnumbersection1, registrationnumbersection2, registrationnumbersection3,
+registrationnumbersection4, yr_of_manf, 
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn  from public.policy_dh_risk_headers_mot
+where vehicle_age != 'False') as c 
+on a.reference_num = c.reference_num and c.rn=1 
+where a.veh_model is null or a.veh_make is null or a.veh_engine_no is null or 
+a.veh_chassis_no is null or a.veh_age is null or a.veh_body is null 
+or a.veh_no is null or a.mfg_year is null 
+
+
+--------------------------------
+
+
+
+create table customermart.temp_pol_retail_002 as (
+select policy_number, reference_num, source_system_name, product_cd ,pol_incept_date, pol_exp_date, veh_model, veh_age, veh_make, veh_body,
+veh_engine_no, veh_chassis_no , veh_no, mfg_year, commit_timestamp,
+from customermart.policy_retail 
+where veh_model is null or veh_age is null or veh_make is null or veh_body  is null or 
+veh_engine_no is null or veh_chassis_no is null or veh_no is null or mfg_year is null)
+
+
+
+update customermart.temp_pol_retail_002
+set veh_model = c.model
+from customermart.temp_pol_retail_002 as a 
+join (select reference_num, model, 
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn  from public.policy_dh_risk_headers_mot) as c 
+on a.reference_num = c.reference_num and c.rn=1 
+where a.veh_model is null 
+
+
+select a.reference_num , b.reference_num, a.veh_model, b.model from customermart.policy_retail a, public.policy_dh_risk_headers_mot b 
+where a.reference_num = b.reference_num and a.veh_model is null and b.model is not null
+
+---------------------------------------
+
+update customermart.temp_pol_retail_002 a
+set veh_model = c.model
+from (select reference_num, model,
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot ) as c
+where  a.reference_num = c.reference_num and a.veh_model is null and c.rn= 1
+
+
+
+create table customermart.temp_pol_retail_002 as (
+select policy_number, reference_num, source_system_name, product_cd ,pol_incept_date, pol_exp_date, veh_model, veh_age, veh_make, veh_body,
+veh_engine_no, veh_chassis_no , veh_no, mfg_year, commit_timestamp,
+from customermart.policy_retail 
+where veh_model is null or veh_age is null or veh_make is null or veh_body  is null or 
+veh_engine_no is null or veh_chassis_no is null or veh_no is null or mfg_year is null)
+
+
+update customermart.temp_pol_retail_002 a
+set veh_make = c.manufacturer 
+from (select reference_num, manufacturer,
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot ) as c
+where  a.reference_num = c.reference_num and a.veh_make is null and c.rn= 1
+
+
+update customermart.temp_pol_retail_002 a
+set veh_engine_no = c.engine_number 
+from (select reference_num, engine_number,
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot ) as c
+where  a.reference_num = c.reference_num and a.veh_engine_no is null and c.rn= 1
+
+
+update customermart.temp_pol_retail_002 a
+set veh_chassis_no = c.chassis_number  
+from (select reference_num, chassis_number,
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot ) as c
+where  a.reference_num = c.reference_num and a.veh_chassis_no is null and c.rn= 1
+
+
+update customermart.temp_pol_retail_002 a
+set veh_age = cast(c.vehicle_age as int)  
+from (select reference_num, vehicle_age,
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot 
+where vehicle_age != 'False' ) as c
+where  a.reference_num = c.reference_num and a.veh_age is null and c.rn= 1
+
+
+
+update customermart.temp_pol_retail_002 a
+set veh_body = c.type_of_body 
+from (select reference_num, type_of_body,
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot) as c
+where  a.reference_num = c.reference_num and a.veh_body is null and c.rn= 1
+
+
+update customermart.temp_pol_retail_002 a
+set mfg_year = c.yr_of_manf 
+from (select reference_num, yr_of_manf,
+row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot) as c
+where  a.reference_num = c.reference_num and a.mfg_year is null and c.rn= 1
+
+
+
+update customermart.temp_pol_retail_002 a
+set veh_no = case 
+				when a.product_cd = '3121' then upper(concat_ws('',c.registration_number,c.registrationnumber2, c.registrationnumber3,c.registrationnumber4))
+				when a.product_cd = '3124' then upper(concat_ws('',c.rgsno1,c.rgsno2,c.rgsno3,c.rgsno4))
+				when a.product_cd = '3122' then upper(concat_ws('',c.registrationnumbersection1, c.registrationnumbersection2, c.registrationnumbersection3, c.registrationnumbersection4))
+				when a.product_cd = '3184' then upper(concat_ws('',c.registrationnumbersection1, c.registrationnumbersection2, c.registrationnumbersection3, c.registrationnumbersection4))
+				else null 
+			 end
+from (select reference_num, registration_number,registrationnumber2, registrationnumber3,registrationnumber4,
+rgsno1 , rgsno2, rgsno3, rgsno4, registrationnumbersection1, registrationnumbersection2, registrationnumbersection3,
+registrationnumbersection4, row_number() over(partition by reference_num order by dat_insert_date desc) as  rn
+from public.policy_dh_risk_headers_mot) as c
+where  a.reference_num = c.reference_num and a.veh_no is null and c.rn= 1
+
+
+
