@@ -1,0 +1,14 @@
+select *  from customermart.cross_sell_banca_3
+where upper(lob) = 'PLUS' and dc_unified_id in (select dc_unified_id from (
+select count(distinct policy_no),dc_unified_id
+from banca_custids_sad
+where rnk=1 and record_type_desc!='CANCELLATION' group by  dc_unified_id
+having count(distinct policy_no)>1) as a where dc_unified_id is not null)
+
+select count (distinct(policy_no)|| coalesce(certificate_no ,'0')), record_type_desc from customermart.cross_sell_banca_3
+where upper(lob) = 'PLUS' and dc_unified_id not in (select dc_unified_id from (
+select count(distinct policy_no),dc_unified_id
+from banca_custids_sad
+where rnk=1 and record_type_desc!='CANCELLATION' group by  dc_unified_id
+having count(distinct policy_no)>1) as a where dc_unified_id is not null)
+group by record_type_desc
