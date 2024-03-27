@@ -1,0 +1,107 @@
+##### steps 1 ######
+create table temp.temp_eng_cam_part_1_dummy as (
+select distinct record_type_desc,application_no,product_name,full_name,mobile,email,dc_unified_id,customer_id,policy_no,certificate_no, 
+proposal_no,pol_incept_date,pol_exp_date,channel,plan_type ,policy_type,renl_cert_no,binddate,gender,birth_date,city,state,pin_code,sum_insured,
+premiumamount,total_premium ,mode_of_payment,ncb_percent,policy_counter,policy_term,cumulative_bonus_earned,no_claim_bonus,no_of_lives
+from (select distinct x.full_name,x.dc_unified_id,pr.customer_id,pr.policy_no,pr.certificate_no,application_no, pr.num_reference_no as proposal_no,
+pr.pol_incept_date,pr.pol_exp_date,pr.record_type_desc,pr.product_name,pr.product_cd,pr.renl_cert_no,pr."timestamp"  as binddate,
+x.gender,cd.birth_date,x.mobile, x.email, x.city,x.state,x.pin_code,rp.sum_insured, rp.policy_counter, rp.policy_term,rp.plan_type ,rp.policy_type,
+rp.premiumamount, rp.total_premium , pr.mode_of_payment ,rp.ncb_percent, rp.cumulative_bonus_earned, rp.no_claim_bonus,pr.channel,rp.no_of_lives, 
+row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.timestamp desc, num_reference_no desc) rn
+from registers.premium_register pr
+left join customermart.policy_retail rp on rp.reference_num = pr.num_reference_no
+left join (select mmp.dc_unified_id, 
+    coalesce (mmp.pstincomingcity,mmp.psnt_address_city, mmp.comm_address_city,mmp.presentaddress_city ,mmp.pstextractedcity) city,
+    coalesce(mmp.pstincomingstate,mmp.psnt_address_state, mmp.cmnincomingstate,mmp.pstincomingstate) state ,
+    coalesce(mmp.pstincomingpin,mmp.comm_address_zip, mmp.pmt_address_zip) pin_code,mbdp.source_customer_id,
+    coalesce(mmp.mobile_primary, mmp.mobile_secondary) mobile, coalesce(mmp.email_primary, mmp.email_secondary)email,mmp.gender,
+    coalesce(mmp.full_name,concat_ws(' ', mmp.first_name, mmp.last_name)) as full_name
+from public.mastercraft_bulk_detail_prod mbdp
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id =mbdp.dc_unified_id and mmp.dc_active_flag =1) x
+on x.source_customer_id=pr.customer_id
+left join customermart.customer_demographics cd on x.dc_unified_id =cd.golden_id 
+where pr.product_cd in ('3124', '3184', '3121','3186', '3122', '1603','1601','1602', '1604','1606','288901','20807','2888','288802','3188','3189','140703','4260','2804','4277','4251','288805','288804','2896')
+and pr.producer_cd in ('0000192004','0007652001','0007652002','0007652003','0014851000','0014851001','0025976000','0025976001','0035539000','0035540000','0035541000','0035542000','0036286000','0039110000','0007652000','1697854000','1697855000','0010805000','0010805003','2106620000')
+and pr.pol_exp_date>=current_date and pr.pol_incept_date<=current_date) as a
+where record_type_desc !='CANCELLATION' and rn=1) 
+distributed by(dc_unified_id);
+
+
+### steps 2 #####
+
+create table customermart.temp_eng_camp_staging_2 as (
+select distinct record_type_desc,application_no,product_name,full_name,mobile,email,dc_unified_id,customer_id,policy_no,certificate_no, 
+proposal_no,pol_incept_date,pol_exp_date,channel,renl_cert_no,binddate,gender,birth_date,city,state,pin_code,sum_insured,premiumamount,
+total_premium ,mode_of_payment,ncb_percent,policy_term,cumulative_bonus_earned,no_claim_bonus,no_of_lives,plan_type, policy_type,
+chassis_number,engine_number,date_of_reg,manufacturer,model,veh_type,variant,variant_code,yr_of_manf, veh_idv,mot_ncb_discount,
+vehicle_registration_no, mot_city, utm_campaign,campaignsource,destination_country,dep_date,return_date,trip,travel_duration,source,score,no_of_claim
+from (select distinct pr.*,
+chassis_number,engine_number, mot.date_of_reg, mot.manufacturer, mot.model, mot.veh_type, mot.variant, mot.variant_code, mot.yr_of_manf, 
+mot.veh_idv, mot.ncb_discount as mot_ncb_discount,concat_ws('',registration_number,registrationnumber2, registrationnumber3,registrationnumber4) vehicle_registration_no, 
+mot.city as mot_city ,w.utm_campaign,w.campaignsource,no_of_claim,lta.destination_country, lta.dep_date, lta.return_date, lta.trip, lta.travel_duration, 
+cbd.source, cbd.score as score, row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.binddate desc, proposal_no desc) rn
+from customermart.temp_eng_camp_staging_1 pr
+left join public.policy_dh_risk_headers_mot mot on pr.proposal_no = mot.reference_num
+left join customermart.temp_wl_camp w on pr.policy_no = w.policynumber
+left join public.policy_dh_risk_headers_lta lta on pr.proposal_no = lta.reference_num
+left join datamarts.credit_bureau_data cbd on cbd.dc_unified_id::bigint=pr.dc_unified_id 
+left join (select lpad(policy_no, 10, '0')policy_no, coalesce(certificate_no, '0')certificate_no,to_date(pol_incept_date, 'dd-MM-yyyy')pol_incept_date, to_date(pol_exp_date, 'dd-MM-yyyy')pol_exp_date, count(distinct claim_no) as no_of_claim 
+from datamarts.producer_policy_product_wise_base_data gc where account_line_cd in ('50')
+group by lpad(policy_no, 10, '0'), coalesce(certificate_no, '0'),to_date(pol_incept_date, 'dd-MM-yyyy'), to_date(pol_exp_date, 'dd-MM-yyyy'))as x 
+on pr.policy_no=x.policy_no and coalesce(pr.certificate_no, '0')=x.certificate_no and pr.pol_incept_date=x.pol_incept_date and pr.pol_exp_date=x.pol_exp_date 
+) as a where rn=1)
+distributed by(dc_unified_id);
+
+
+#### steps 3 for total product count against golden_id and final table #####
+
+create table customermart.temp_all_poduct_count as (
+select distinct dc_unified_id, string_agg(distinct product_name,',') as all_product_list, count(distinct product_name) as total_product_count
+from registers.premium_register pr
+join public.mastercraft_bulk_detail_prod mbdp on pr.customer_id = mbdp.source_customer_id 
+where mbdp.dc_unified_id in (select dc_unified_id from customermart.temp_eng_camp_staging_2)
+group by dc_unified_id)
+
+
+
+create table customermart.temp_cust_camp_final as (
+select *,RTRIM(REGEXP_REPLACE(all_product_list,CONCAT('\m(?:', REPLACE(product_name,',','|'),')\M,?'),'','g'), ',') as other_product_name from (
+select distinct pr.record_type_desc,cast(pr.application_no as varchar),pr.product_name,
+pr.full_name,pr.mobile,pr.email,pr.dc_unified_id,pr.customer_id,pr.policy_no,pr.certificate_no,
+cast(pr.proposal_no as varchar),pr.pol_incept_date,pr.pol_exp_date,pr.channel,pr.renl_cert_no,pr.binddate,pr.gender,pr.birth_date,pr.city,pr.state,pr.pin_code,
+pr.sum_insured,pr.premiumamount,pr.total_premium,pr.mode_of_payment,pr.ncb_percent,pr.policy_term,pr.cumulative_bonus_earned,
+pr.no_claim_bonus,pr.no_of_lives,pr.chassis_number,pr.engine_number,pr.date_of_reg,pr.manufacturer,pr.model,pr.veh_type,pr.variant,pr.variant_code,
+pr.yr_of_manf,pr.veh_idv,pr.mot_ncb_discount,pr.vehicle_registration_no,pr.mot_city,pr.utm_campaign,pr.campaignsource,pr.destination_country,
+pr.dep_date,pr.return_date,pr.trip,pr.plan_type,pr.policy_type, pr.travel_duration,pr."source",pr.score,
+cast(pc.all_product_list as varchar),pc.total_product_count, no_of_claim
+from customermart.temp_eng_camp_staging_2 pr
+left join customermart.temp_all_poduct_count pc on pr.dc_unified_id = pc.dc_unified_id
+union
+select distinct pr.record_type_desc,cast(pr.application_no as varchar),pr.product_name,
+gc.customer_name as full_name,pr.mobile,pr.email,pr.dc_unified_id,pr.customer_id,pr.policy_no,pr.certificate_no,
+cast(pr.proposal_no as varchar),pr.pol_incept_date,pr.pol_exp_date,pr.channel,pr.renl_cert_no,pr.binddate,pr.gender,pr.birth_date,pr.city,pr.state,pr.pin_code,
+pr.sum_insured,pr.premiumamount,pr.total_premium,pr.mode_of_payment,pr.ncb_percent,pr.policy_term,pr.cumulative_bonus_earned,
+pr.no_claim_bonus,pr.no_of_lives,pr.chassis_number,pr.engine_number,pr.date_of_reg,pr.manufacturer,pr.model,pr.veh_type,pr.variant,pr.variant_code,
+pr.yr_of_manf,pr.veh_idv,pr.mot_ncb_discount,pr.vehicle_registration_no,pr.mot_city,pr.utm_campaign,pr.campaignsource,pr.destination_country,
+pr.dep_date,pr.return_date,pr.trip,pr.plan_type,pr.policy_type, pr.travel_duration,pr."source",pr.score,
+cast(pc.all_product_list as varchar),pc.total_product_count, no_of_claim
+from customermart.temp_eng_camp_staging_2 pr
+left join customermart.temp_all_poduct_count pc on pr.dc_unified_id = pc.dc_unified_id
+left join public.customer_gc_genmst_customer gc on pr.customer_id = gc.customer_code 
+where pr.dc_unified_id is null
+) as a)distributed by (dc_unified_id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
