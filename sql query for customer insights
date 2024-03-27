@@ -1,0 +1,1021 @@
+################ MART Calculation ######################
+1. select count(distinct dc_unified_id) from public.mastercraft_master_prod mmp where dc_active_flag='1' # dc_action_date
+
+select count(distinct mmp.dc_unified_id)  from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id where mmp.dc_active_flag = 1 and dc_action_date <='2023-12-28'
+
+
+select count(distinct mmp.dc_unified_id)  from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+where mmp.dc_active_flag = 1 and mmp.dc_action_date <='2023-12-28' and dc_action_date >='2020-12-29'  and and mmp.source_id='GC'
+
+create table customermart.temp_cust_gid_ci_6m as (
+select count(distinct mmp.dc_unified_id)  from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' 
+and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2023-07-01'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')
+
+
+
+create table customermart.temp_cust_gid_ci as (
+select distinct mmp.dc_unified_id  from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' 
+and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2020-12-29'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')
+
+
+2. Mobile
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1 and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag=1)as aa 
+)as bb where mobile_contactibility=1 group by dc_unified_id) as cc
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then 1 else 0 end mobile_contactibility
+from customermart.mobile_no_csv mn
+join public.mastercraft_master_prod mmp on cast(mn.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 
+)as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd) as eeeee
+
+
+
+
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2020-12-29' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aa 
+)as bb where mobile_contactibility=1 group by dc_unified_id) as cc
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then 1 else 0 end mobile_contactibility
+from customermart.mobile_no_csv mn
+join public.mastercraft_master_prod mmp on cast(mn.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'  and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC'
+)as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd) as eeeee
+
+3. email
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1 and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 )as aa )as bb 
+where mobile_contactibility=1 group by dc_unified_id) as cc ) as  gggg
+union
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when email is not null then 1 else 0 end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1)as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd
+
+
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2020-12-29'  and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'  and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aa )as bb 
+where mobile_contactibility=1 group by dc_unified_id) as cc ) as  gggg
+union
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when email is not null then 1 else 0 end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'  and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd
+
+4. Both email and mobile
+
+select count(dc_unified_id),sum(max_con) from(
+select dc_unified_id,max(contact) max_con,min(communication_type) min,max(communication_type) max from(
+select dc_unified_id,communication_type,
+case when coalesce (value)  is not null  then 1 else 0 end contact from(
+select dc_unified_id,value,communication_type from customermart.contactability c 
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1
+) as a) as b group by dc_unified_id) as c where min in('email','mobile') and max in ('email','mobile')
+-------------------------------------------------------------------------------------------------------------
+select count(dc_unified_id),sum(max_con) from(
+select dc_unified_id,max(contact) max_con,min(communication_type) min,max(communication_type) max from(
+select dc_unified_id,communication_type,
+case when coalesce (value)  is not null  then 1 else 0 end contact from(
+select mmp.dc_unified_id,value,communication_type from customermart.contactability c 
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1
+where value is not null) as a) as b group by dc_unified_id) as c where min in('email','mobile') and max in ('email','mobile')
+
+--3048215, 3048215
+-------------------------------------------------------------------------------------------------------------------
+5. LOB-WISE Distribution--total gid and cust_id
+
+select count(distinct dc_unified_id), minor_line
+from ( select distinct dc_unified_id , customer_id, pr.product_name,
+row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.timestamp desc) rn,
+xyz.minor_line as ml,pr.record_type_desc,
+CASE WHEN minor_line IS NULL THEN 'Proposal' 
+      WHEN minor_line = 'NULL' THEN 'Proposal'
+      ELSE minor_line
+      END AS minor_line
+from (select distinct mmp.dc_unified_id, mbdp.source_customer_id, mmp.dc_active_flag  from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id ) as a
+inner join registers.premium_register pr on pr.customer_id = a.source_customer_id
+left join (select * from (select distinct minor_line, product_name, new_direct, row_number() over (partition by product_name order by mnth_yr desc) rk 
+from mappers.direct_cons_comm_segment) as ab
+where rk = 1) as xyz
+on upper(trim(pr.product_name)) = upper(trim(xyz.product_name))
+where pr.pol_exp_date >= '2023-12-28' and pr.pol_incept_date <='2023-12-28' and dc_active_flag='1' ) as b
+where record_type_desc !='CANCELLATION' and rn=1
+group by minor_line
+
+
+select count(distinct customer_code), minor_line
+from ( select distinct  cggc.customer_code, pr.product_name,
+row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.timestamp desc) rn,
+xyz.minor_line as ml,pr.record_type_desc, 
+ CASE WHEN minor_line IS NULL THEN 'Proposal' 
+      WHEN minor_line = 'NULL' THEN 'Proposal'
+      ELSE minor_line
+      END AS minor_line
+from public.customer_gc_genmst_customer cggc on a.source_customer_id=cggc.customer_code 
+left join registers.premium_register pr on  cggc.customer_code=pr.customer_id 
+left join (select * from (select distinct minor_line, product_name, new_direct, row_number() over (partition by product_name order by mnth_yr desc) rk 
+from mappers.direct_cons_comm_segment) as ab
+where rk = 1) as xyz
+on upper(trim(pr.product_name)) = upper(trim(xyz.product_name))
+where where ind_corp_flag='I' and dat_insert_date <='2023-12-28' ) as b
+where record_type_desc !='CANCELLATION' and rn=1
+group by minor_line
+
+6. unique mobile and email
+select communication_type,count(distinct value)
+from contactability c 
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1 ) as a where value is not null)
+group by communication_type
+
+7. no of policy # certificate 0 condition lahgana hai
+select count(distinct dc_unified_id) from (
+select count(distinct policy_no||certificate_no),dc_unified_id  from ( select policy_no, certificate_no,record_type_desc,dc_unified_id,
+row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.timestamp desc) rn
+from registers.premium_register pr
+join (select distinct mmp.dc_unified_id, mbdp.source_customer_id from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id where mmp.dc_active_flag='1'  and mmp.source_id='GC') as a 
+on pr.customer_id = a.source_customer_id
+where pr.pol_exp_date >= '2023-12-28' and pr.pol_incept_date <='2023-12-28') as a 
+where record_type_desc !='CANCELLATION' and rn=1
+group by dc_unified_id
+having count(distinct policy_no||certificate_no)=2) as a
+
+7 a. product counts
+
+select count(distinct dc_unified_id) from (
+select count(distinct product_name),dc_unified_id  from ( select policy_no, certificate_no,record_type_desc,dc_unified_id,product_name,
+row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.timestamp desc) rn
+from registers.premium_register pr
+join (select distinct mmp.dc_unified_id, mbdp.source_customer_id from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id where mmp.dc_active_flag='1'  and mmp.source_id='GC') as a 
+on pr.customer_id = a.source_customer_id
+where pr.pol_exp_date >= '2023-12-28' and pr.pol_incept_date <='2023-12-28') as a 
+where record_type_desc !='CANCELLATION' and rn=1
+group by dc_unified_id
+having count(distinct product_name)=1) as a
+
+8. unique Mobile
+select count(distinct mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar), mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag='1' and mmp.source_id='GC') as a) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC')as bb) as cc) as jjj
+union 
+select * from (
+select cast(dc_unified_id as varchar),mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then phone else null end mobile_contactibility
+from customermart.mobile_no_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC') as dddd) as ffff) as zz) as xx
+
+9. unique email
+select count(distinct mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar),mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag='1' and mmp.source_id='GC') as a ) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC')as aa )as bb ) as cc 
+union
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select id as dc_unified_id, case when email is not null then email else null end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC')as aaa) as bbb) as dddd) as zczc
+
+
+
+#################### GC CALCULATION#######################
+select count(customer_code),sum(max_con) from(
+select customer_code,max(contact) max_con from(
+select customer_code,
+case when coalesce (mobile,mobile_no,mobile1,mobile2,mobile3) is not null then 1 else 0 end contact from(
+select customer_code,mobile, mobile_no,mobile1,mobile2,mobile3
+from public.customer_gc_genmst_customer cggc where ind_corp_flag='I' 
+and  dat_insert_date <='2023-12-28'
+) as a) as b group by customer_code) as c
+
+
+select count(customer_code),sum(max_con) from(
+select customer_code,max(contact) max_con from(
+select customer_code,
+case when coalesce (email,email_2) is not null then 1 else 0 end contact from(
+select customer_code,email,email_2
+from public.customer_gc_genmst_customer cggc where ind_corp_flag='I' and
+dat_insert_date <='2023-12-28'
+) as a) as b group by customer_code) as c
+
+
+
+select count(customer_code),sum(max_con) from(
+select customer_code,max(contact) max_con from(
+select customer_code,
+case when coalesce (mobile,mobile_no,mobile1,mobile2,mobile3) is not null 
+and coalesce (email,email_2) is not null then 1 else 0 end contact from(
+select customer_code,mobile, mobile_no,mobile1,mobile2,mobile3,email,email_2
+from public.customer_gc_genmst_customer cggc where ind_corp_flag='I' and
+dat_insert_date <='2023-12-28'
+) as a) as b group by customer_code) as c
+
+
+
+
+
+select count(distinct value) from(
+select unnest (array [email,email_2]) value
+from public.customer_gc_genmst_customer cggc
+where ind_corp_flag='I' and
+dat_insert_date <='2023-12-28'
+)as a
+
+
+
+
+select count(distinct value) from(
+select unnest (array [mobile, mobile_no,mobile1,mobile2,mobile3]) value
+from public.customer_gc_genmst_customer cggc
+where ind_corp_flag='I' and
+dat_insert_date <='2023-12-28'
+)as a
+
+
+#######################################################
+create table customermart.temp_email_ci as (
+select * 
+from(
+select distinct dc_unified_id , mobile_contactibility, cx_email from (
+select * from (
+select cast(a.dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility, cx_email from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then 1 else 0 end mobile_contactibility, 
+case when value ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then value end cx_email,
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1 and mbdp.dc_action_date<='2023-12-28' and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select dc_unified_id, case when email is not null then 1 else 0 end mobile_contactibility,
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then value end cx_email from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as email
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1)as aa )as bb 
+where mobile_contactibility=1 group by dc_unified_id) as cc ) as  gggg
+union
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select id as dc_unified_id, case when email is not null then 1 else 0 end mobile_contactibility,
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then email end cx_email,
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1)as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd)
+
+
+##################################
+select count(distinct dc_unified_id), count(distinct customer_id), minor_line
+from ( select distinct dc_unified_id , customer_id, pr.product_name,
+row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.timestamp desc) rn,
+xyz.minor_line,pr.record_type_desc 
+from registers.premium_register pr
+join (select distinct mmp.dc_unified_id, mbdp.source_customer_id, mmp.dc_active_flag, dc_action_date  from mastercraft_bulk_detail_prod mbdp
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id ) as a on pr.customer_id = a.source_customer_id
+left join (select * from (select distinct minor_line, product_name, new_direct, row_number() over (partition by product_name order by mnth_yr desc) rk 
+from mappers.direct_cons_comm_segment) as ab
+where rk = 1) as xyz
+on upper(trim(pr.product_name)) = upper(trim(xyz.product_name))
+where dc_action_date<='2023-12-28' and dc_active_flag='1' ) as a 
+where record_type_desc !='CANCELLATION' and rn=1
+group by minor_line
+
+######################################
+select count(distinct customer_code), minor_line
+from ( select distinct customer_code , customer_id, pr.product_name,
+row_number() over(partition by pr.policy_no , coalesce(pr.certificate_no, '0') order by pr.timestamp desc) rn,
+xyz.minor_line,pr.record_type_desc 
+from registers.premium_register pr
+join public.customer_gc_genmst_customer cggc on pr.customer_id = cggc.customer_code
+left join (select * from (select distinct minor_line, product_name, new_direct, row_number() over (partition by product_name order by mnth_yr desc) rk 
+from mappers.direct_cons_comm_segment) as ab
+where rk = 1) as xyz
+on upper(trim(pr.product_name)) = upper(trim(xyz.product_name))
+where ind_corp_flag='I' 
+and  dat_insert_date <='2023-12-28'  ) as a 
+where record_type_desc !='CANCELLATION' and rn=1
+group by minor_line
+########################################
+create table customermart.temp_ci_mob_6m_new as (
+select *
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag='1' and mmp.source_id='GC'
+and mbdp.dc_action_date>='2023-07-01' and mbdp.dc_action_date<='2023-12-28' and mmp.source_id='GC') as dddff ) as a) as f) as fsf
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC')as bb) as cc) as jjj
+union 
+select * from (
+select cast(dc_unified_id as varchar),mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then phone else null end mobile_contactibility
+from customermart.mobile_no_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC') as dddd) as ffff)
+distributed by (dc_unified_id)
+#########################
+create table customermart.temp_ci_mob_3y as (
+select *
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag='1' and mmp.source_id='GC'
+and mbdp.dc_action_date>='2020-12-29' and mbdp.dc_action_date<='2023-12-28') as dddff ) as a) as f) as fsf
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC')as bb) as cc) as jjj
+union 
+select * from (
+select cast(dc_unified_id as varchar),mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then phone else null end mobile_contactibility
+from customermart.mobile_no_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC') as dddd) as ffff)
+distributed by (dc_unified_id)
+###############################
+create table customermart.temp_email_ci_6m as (
+select distinct dc_unified_id , mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility, cx_email from (
+select cast(a.dc_unified_id as varchar), cx_email,
+case when cx_email is not null 
+then 1 else 0 end mobile_contactibility
+from (
+select distinct mmp.dc_unified_id ,  
+case when value ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then value end cx_email
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1  and mmp.source_id='GC' and 
+and mbdp.dc_action_date>='2023-07-01' and mbdp.dc_action_date<='2023-12-28') as a) as xcv where mobile_contactibility=1
+group by dc_unified_id, cx_email) as f
+union 
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), cx_email,
+case when cx_email is not null then 1 else 0 end mobile_contactibility
+from (
+select dc_unified_id, 
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then email end cx_email from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as email
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 and mmp.source_id='GC')as aa )as bb) aswer 
+where mobile_contactibility=1 group by dc_unified_id, cx_email 
+union
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), cx_email,
+case when cx_email is not null then 1 else 0 end mobile_contactibility from (
+select id as dc_unified_id, 
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then email end cx_email
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 and mmp.source_id='GC')as aaa ) as wwww
+where mobile_contactibility=1 group by dc_unified_id, cx_email)
+distributed by (dc_unified_id)
+###########################
+create table customermart.temp_email_ci_3y as (
+select distinct dc_unified_id , mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility, cx_email from (
+select cast(a.dc_unified_id as varchar), cx_email,
+case when cx_email is not null 
+then 1 else 0 end mobile_contactibility
+from (
+select distinct mmp.dc_unified_id ,  
+case when value ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then value end cx_email
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join public.mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id and mmp.dc_active_flag=1
+and mbdp.dc_action_date>='2020-12-29' and mbdp.dc_action_date<='2023-12-28' and mmp.source_id='GC') as a) as xcv where mobile_contactibility=1
+group by dc_unified_id, cx_email) as f
+union 
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), cx_email,
+case when cx_email is not null then 1 else 0 end mobile_contactibility
+from (
+select dc_unified_id, 
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then email end cx_email from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as email
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 and mmp.source_id='GC')as aa )as bb) aswer 
+where mobile_contactibility=1 group by dc_unified_id, cx_email 
+union
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), cx_email,
+case when cx_email is not null then 1 else 0 end mobile_contactibility from (
+select id as dc_unified_id, 
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then email end cx_email
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 and mmp.source_id='GC')as aaa ) as wwww
+where mobile_contactibility=1 group by dc_unified_id, cx_email)
+distributed by (dc_unified_id)
+
+##################################################################
+create table customermart.temp_ci_me_6m as (
+select kk.dc_unified_id from customermart.temp_ci_mob_6m_new kk
+inner join customermart.temp_email_ci_6m ll on kk.dc_unified_id=ll.dc_unified_id)
+
+create table customermart.temp_ci_me_3y as (
+select pp.dc_unified_id from customermart.temp_ci_mob_3y pp
+inner join customermart.temp_email_ci_3y bb on pp.dc_unified_id=bb.dc_unified_id)
+
+
+select count(distinct dc_unified_id ) from customermart.temp_ci_me_6m
+
+select count(distinct dc_unified_id ) from customermart.temp_ci_me_3y
+
+select count(distinct dc_unified_id ) from customermart.temp_ci_me_6m
+where dc_unified_id::bigint in (select dc_unified_id from customermart.temp_cust_gid_ci_6m_h)
+
+select count(distinct dc_unified_id ) from customermart.temp_ci_me_3y 
+where dc_unified_id::bigint in (select dc_unified_id from customermart.temp_cust_gid_ci_h)
+#########################################################
+create table customermart.temp_email_ci_6m_n as (
+select distinct dc_unified_id , mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility, cx_email from (
+select cast(a.dc_unified_id as varchar), cx_email,
+case when cx_email is not null 
+then 1 else 0 end mobile_contactibility
+from (
+select distinct mmp.dc_unified_id ,  
+case when value ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then value end cx_email
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2023-07-01'  and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC') as a) as xcv where mobile_contactibility=1
+group by dc_unified_id, cx_email) as f
+union 
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), cx_email,
+case when cx_email is not null then 1 else 0 end mobile_contactibility
+from (
+select dc_unified_id, 
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then email end cx_email from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as email
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01' and 
+matp.dc_action_type='NEW')as aa )as bb) aswer 
+where mobile_contactibility=1 group by dc_unified_id, cx_email 
+union
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility, cx_email from (
+select cast(dc_unified_id as varchar), cx_email,
+case when cx_email is not null then 1 else 0 end mobile_contactibility from (
+select id as dc_unified_id, 
+case when email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$' then email end cx_email
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01' and 
+matp.dc_action_type='NEW')as aaa ) as wwww
+where mobile_contactibility=1 group by dc_unified_id, cx_email)
+distributed by (dc_unified_id)
+###################################
+
+create table customermart.temp_ci_mob_6m_h as (
+select *
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2023-07-01'  and mmp.source_id='GC' and 
+matp.dc_action_type='NEW') as dddff ) as a) as f) as fsf
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01' and 
+matp.dc_action_type='NEW')as bb) as cc) as jjj
+union 
+select * from (
+select cast(dc_unified_id as varchar),mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then phone else null end mobile_contactibility
+from customermart.mobile_no_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01' and 
+matp.dc_action_type='NEW') as dddd) as ffff)
+distributed by (dc_unified_id)
+
+#####################
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2020-12-29' 
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and 
+matp.dc_action_type='NEW' and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29' 
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aa 
+)as bb where mobile_contactibility=1 group by dc_unified_id) as cc
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then 1 else 0 end mobile_contactibility
+from customermart.mobile_no_csv mn
+join public.mastercraft_master_prod mmp on cast(mn.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC'
+)as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd) as eeeee
+############
+
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2020-12-29'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aa )as bb 
+where mobile_contactibility=1 group by dc_unified_id) as cc ) as  gggg
+union
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when email is not null then 1 else 0 end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd
+
+################
+
+
+select count(distinct mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar), mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2020-12-29'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW' and mmp.source_id='GC') as a) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')as bb) as cc) as jjj
+union 
+select * from (
+select cast(dc_unified_id as varchar),mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then phone else null end mobile_contactibility
+from customermart.mobile_no_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW' and mmp.source_id='GC') as dddd) as ffff) as zz) as xx
+
+################
+
+select count(distinct mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select cast(a.dc_unified_id as varchar),mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2020-12-29'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW' and mmp.source_id='GC') as a ) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29' 
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')as aa )as bb ) as cc 
+union
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select id as dc_unified_id, case when email is not null then email else null end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2020-12-29'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2020-12-29' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')as aaa) as bbb) as dd
+
+###############################################################
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2023-07-01'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' and
+matp.dc_action_type='NEW' and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01' and 
+matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' and
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aa 
+)as bb where mobile_contactibility=1 group by dc_unified_id) as cc
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then 1 else 0 end mobile_contactibility
+from customermart.mobile_no_csv mn
+join public.mastercraft_master_prod mmp on cast(mn.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01'  and mmp.source_id='GC' 
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and 
+matp.dc_action_type='NEW' and mmp.source_id='GC'
+)as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd) as eeeee
+################
+select count(mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar), max(mobile_contactibility) mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then 1 else 0 end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2023-07-01'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC') as a where mobile_contactibility=1
+group by dc_unified_id) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then 1 else 0 end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aa )as bb 
+where mobile_contactibility=1 group by dc_unified_id) as cc ) as  gggg
+union
+select * from (
+select cast(dc_unified_id as varchar), max(mobile_contactibility) as mobile_contactibility from (
+select id as dc_unified_id, case when email is not null then 1 else 0 end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag=1
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and 
+matp.dc_action_type='NEW' and mmp.source_id='GC')as aaa 
+where mobile_contactibility=1 group by dc_unified_id) as bbb) as dddd
+####################
+
+select count(distinct mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select * from (
+select cast(a.dc_unified_id as varchar), mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='mobile' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and 
+mbdp.customer_creation_date >='2023-07-01'  and mmp.source_id='GC' and 
+matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and matp.dc_action_type='NEW' and mmp.source_id='GC') as a) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')as bb) as cc) as jjj
+union 
+select * from (
+select cast(dc_unified_id as varchar),mobile_contactibility from (
+select id as dc_unified_id, case when phone is not null then phone else null end mobile_contactibility
+from customermart.mobile_no_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW' and mmp.source_id='GC') as dddd) as ffff) as zz) as xx
+###############
+
+select count(distinct mobile_contactibility) 
+from(
+select distinct dc_unified_id , mobile_contactibility from (
+select cast(a.dc_unified_id as varchar),mobile_contactibility from (
+select distinct mmp.dc_unified_id , 
+case when communication_sub_type='email' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join public.mastercraft_bulk_detail_prod mbdp
+on c.source_system_customer_id = mbdp.source_customer_id
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.dc_active_flag ='1' and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2023-07-01' 
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW' and mmp.source_id='GC') as a ) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01' 
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')as aa )as bb ) as cc 
+union
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility from (
+select id as dc_unified_id, case when email is not null then email else null end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC'
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+where mmp.customer_creation_date <='2023-12-28' and mmp.customer_creation_date >='2023-07-01'
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+###########
