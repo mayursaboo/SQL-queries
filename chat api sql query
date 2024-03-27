@@ -1,0 +1,93 @@
+create table customermart.temp_mot_chat_api_db as (
+select distinct mmp.full_name, mmp.psnt_address_country, mmp.psnt_address_state, mmp.psnt_address_city, mmp.psnt_address_zip,
+coalesce(mmp.psnt_address_line_1, mmp.psnt_address_line_2, mmp.psnt_address_line_3,mmp.psnt_address_city, mmp.psnt_address_state, mmp.psnt_address_zip)address,
+engine_number, chassis_number, cc,yr_of_manf,type_of_body,registered_seating_capacity, trailer_idv, owner_occupation ,
+mot.fuel_type,coalesce(totalidvy1, totalidvy2,totalidvy3)total_IDV,nonelectricalaccessoriesy1,nonelectricalaccessoriesy2, nonelectricalaccessoriesy3,
+rating_zone,electricalaccessoriesidv,rggi.txt_intermediary_name agent_name, coalesce(txt_mobile,txt_telephone,txt_telephone1, txt_contact_phone,txt_emer_person_mobile_number,txt_policy_phone,txt_alt_mobile) agent_mobile, 
+rggi.txt_license_no as agent_license_no,'' as hypothecator,rto_location,'' as biofuelcnglpgkit, '' as nonbuiltinaccessor, '' as placeofsupply, '' as statecode, '' as covernote_no, pp.policy_no as previous_policy_no,
+pp.policy_effective_to as previous_policy_exp_date, pp.previous_policy_type, pp.num_reference_number, pp.policy_effective_from
+from public.policy_dh_risk_headers_mot mot
+join customermart.policy_retail pr on mot.reference_num =pr.reference_num 
+left join public.reference_gc_genmst_intermediary rggi on pr.txt_intermediary_cd =rggi.txt_intermediary_cd
+left join public.mastercraft_bulk_detail_prod mbdp on pr.source_system_customer_id =mbdp.source_customer_id 
+join public.mastercraft_master_prod mmp on mbdp.dc_unified_id =mmp.dc_unified_id
+left join public.policy_gc_previous_policy_details_tab pp on pr.reference_num =pp.num_reference_number 
+where pr.reference_num in (select reference_num from cover_details_temp))
+
+
+create table customermart.temp_lta_chat_api_db as (
+select '' as endorsement_no, '' as endorsing_agent_id, '' as schedule_number,rrp.policy_issuance_date,lta."ZONE",
+coalesce(mmp.mobile_primary, mmp.mobile_secondary)applicant_phone_no, lta.dep_date, lta.return_date, mmp.full_name,
+lta.travel_duration,mmp.gstin,'' as endorsement_type, gp.txt_endorsement_wording, coalesce(mmp.cleansed_passport, mmp.passport)passport,
+mmp.birth_date, coalesce(lta2.insured_first_name, lta2.insured_middle_name, lta2.insured_last_name)insured_name,
+coalesce(mmp.psnt_address_line_1, mmp.psnt_address_line_2, mmp.psnt_address_line_3,mmp.psnt_address_city, mmp.psnt_address_state, mmp.psnt_address_zip)address
+from public.policy_dh_risk_headers_lta lta
+join customermart.policy_retail pr on lta.reference_num =pr.reference_num
+left join public.policy_dh_risk_details_lta lta2 on pr.reference_num=lta2.reference_num 
+join registers.premium_register rrp on pr.reference_num =rrp.num_reference_no 
+left join public.mastercraft_bulk_detail_prod mbdp on pr.source_system_customer_id =mbdp.source_customer_id 
+join public.mastercraft_master_prod mmp on mbdp.dc_unified_id =mmp.dc_unified_id
+left join public.policy_gc_gen_prop_information_tab gp on pr.source_system_customer_id =gp.txt_customer_id 
+where pr.reference_num in (select reference_num from cover_details_temp))
+
+create table customermart.temp_hlt_chat_api_db as (
+select distinct pr.policy_number, pr.certificate_no,pr.reference_num, pr.source_system_customer_id, pr.product_name, pr.product_cd, 
+pr.lob, pr.pol_incept_date, pr.pol_exp_date, pr.policy_type, pr.ncb_percent, pr.discount,
+rggi.txt_intermediary_name agent_name, coalesce(txt_mobile,txt_telephone,txt_telephone1, txt_contact_phone,txt_emer_person_mobile_number,txt_policy_phone,txt_alt_mobile) agent_mobile, 
+rggi.txt_license_no as agent_license_no,sad.branch,sad.renl_cert_no , pr.policy_counter , 
+mmp.full_name, mmp.psnt_address_country, mmp.psnt_address_state, mmp.psnt_address_city, mmp.psnt_address_zip,
+coalesce(mmp.psnt_address_line_1, mmp.psnt_address_line_2, mmp.psnt_address_line_3,mmp.psnt_address_city, mmp.psnt_address_state, mmp.psnt_address_zip)address,
+coalesce(mmp.mobile_primary, mmp.mobile_secondary)mobile, '' as statecode, '' as placeofsupply, coalesce(mmp.email_primary, mmp.email_secondary)email,
+coalesce(mmp.cleansed_pan, mmp.pan), mmp.birth_date, sad.application_no,'' as branch_code, pr.record_type_desc, rd.insured_name, rd.insured_dob,
+rd.relationship_with_policyholder, pr.sum_insured, rd.preexisting_disease,uh.nomineename, uh.relationshipwithinsured, 
+pr.premiumamount, pr.total_premium
+from public.policy_dh_risk_headers_hlt hlt
+join customermart.policy_retail pr on hlt.reference_num =pr.reference_num 
+left join public.policy_dh_risk_details_hlt rd on pr.reference_num =rd.reference_num
+left join public.underwriting_dh_cnfgtr_otherdt_grid_tab_hlt uh on pr.reference_num =uh.num_reference_number 
+join datamarts.sales_all_details sad on pr.reference_num=sad.proposal_no
+left join public.reference_gc_genmst_intermediary rggi on pr.txt_intermediary_cd =rggi.txt_intermediary_cd
+left join public.mastercraft_bulk_detail_prod mbdp on pr.source_system_customer_id =mbdp.source_customer_id 
+join public.mastercraft_master_prod mmp on mbdp.dc_unified_id =mmp.dc_unified_id
+where pr.reference_num in (select reference_num from cover_details_temp))
+
+
+select distinct full_name, psnt_address_country,psnt_address_state,psnt_address_city,psnt_address_zip,address,pan,passport,gstin,
+agent_name,agent_mobile, agent_license_no,'' as application_no,policy_issuance_date::date, rto_location,
+previous_policy_no, previous_policy_exp_date,previous_policy_type,policy_effective_from,
+insured_name,insured_dob,birth_date,statecode,placeofsupply,
+covernote_no,fuel_type, owner_occupation, rating_zone, 
+endorsement_no,endorsing_agent_id,schedule_number,dep_date,return_date,travel_duration,endorsement_type,txt_endorsement_wording,
+sum_insured::int,premiumamount,total_premium,
+branch,branch_code,renl_cert_no ,policy_counter,business_type ,txt_business_type,preexisting_disease, 
+trailer_idv, total_IDV, electricalaccessoriesidv, engine_number, chassis_number, cc,yr_of_manf,type_of_body,biofuelcnglpgkit,
+registered_seating_capacity ,nonelectricalaccessoriesy1,nonelectricalaccessoriesy2, nonelectricalaccessoriesy3,nonbuiltinaccessor
+from temp_mot_chat_api_db
+union
+select distinct full_name, psnt_address_country,psnt_address_state,psnt_address_city,psnt_address_zip,address,pan,cleansed_passport as passport,'' as gstin, 
+agent_name,agent_mobile, agent_license_no,application_no,policy_issuance_date,rto_location,
+previous_policy_no,previous_policy_exp_date::timestamp,previous_policy_type,policy_effective_from::timestamp,
+insured_name,insured_dob, birth_date,statecode,placeofsupply,
+covernote_no, fuel_type, occupation as owner_occupation,sad_zone as rating_zone,
+endorsement_no,endorsing_agent_id,schedule_number,dep_date,return_date,travel_duration,endorsement_type,txt_endorsement_wording,
+sum_insured::int, premiumamount, total_premium,
+branch,branch_code,renl_cert_no ,policy_counter, business_type ,txt_business_type, preexisting_disease, 
+trailer_idv, total_IDV, electricalaccessoriesidv, engine_number, chassis_number, cc,yr_of_manf,type_of_body,biofuelcnglpgkit,
+registered_seating_capacity ,nonelectricalaccessoriesy1,nonelectricalaccessoriesy2, nonelectricalaccessoriesy3,nonbuiltinaccessor
+from temp_hlt_chat_api_db_v1
+union
+select full_name,psnt_address_country,psnt_address_state,psnt_address_city,psnt_address_zip, address,pan,passport,gstin,
+agent_name,agent_mobile,agent_license_no,application_no,policy_issuance_date,rto_location,
+previous_policy_no,previous_policy_exp_date::timestamp,previous_policy_type,policy_effective_from::timestamp,
+insured_name,insured_dob,birth_date,statecode,placeofsupply,
+covernote_no, fuel_type, occupation as owner_occupation,"ZONE" as rating_zone,
+endorsement_no, endorsing_agent_id, schedule_number,dep_date,return_date,travel_duration,endorsement_type, txt_endorsement_wording,
+sum_insured, premiumamount,total_premium,
+branch,branch_code,renl_cert_no ,policy_counter,business_type ,txt_business_type,preexisting_disease, 
+trailer_idv, total_IDV, electricalaccessoriesidv, engine_number, chassis_number, cc,yr_of_manf,type_of_body,biofuelcnglpgkit,
+registered_seating_capacity ,nonelectricalaccessoriesy1,nonelectricalaccessoriesy2, nonelectricalaccessoriesy3,nonbuiltinaccessor
+from temp_lta_chat_api_db
+
+
+
+
