@@ -1,0 +1,82 @@
+create table customermart.temp_ci_6m_info as (
+select distinct mmp.dc_unified_id, mbdp.customer_creation_date,pr.customer_id, pr.num_reference_no,
+pr.policy_no,pr.certificate_no, pr.pol_incept_date,pr.pol_exp_date, pr.channel,pr.product_name, 
+pr."timestamp" as binddate, pr.client_name
+from mastercraft_bulk_detail_prod mbdp 
+join mastercraft_master_prod mmp on mmp.dc_unified_id = mbdp.dc_unified_id 
+join public.mastercraft_audit_trail_prod matp on mmp.dc_unified_id=matp.dc_unified_id 
+left join registers.premium_register pr on pr.customer_id=mbdp.source_customer_id
+where mmp.dc_active_flag ='1' 
+and mbdp.customer_creation_date <='2023-12-28' and mbdp.customer_creation_date >='2023-07-01'  
+and matp.dc_action_date <='2023-12-28' and matp.dc_action_date >='2023-07-01' 
+and mmp.source_id='GC' and matp.dc_action_type='NEW')
+distributed by (dc_unified_id)
+
+
+---drop table  customermart.temp_ci_6m_info
+
+
+
+
+select count(distinct dc_unified_id) from mfo
+
+
+create table customermart.temp_ci_6m_info_mob as 
+(
+select distinct dc_unified_id , mobile_contactibility,source_system_name from (
+select * from (
+select cast(a.dc_unified_id as varchar), mobile_contactibility,source_system_name from (
+select distinct mbdp.dc_unified_id , c.source_system_name,
+case when communication_sub_type='mobile' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join  customermart.temp_ci_6m_info mbdp
+on c.source_system_customer_id = mbdp.customer_id
+) as a) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility ,'credit_bureau' as source_system_name from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(phone_1, phone_2, phone_3, phone_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC'
+where mmp.dc_unified_id in (select dc_unified_id from customermart.temp_ci_6m_info mbdp))as bb) as cc) as jjj
+union 
+select * from (
+select cast(dc_unified_id as varchar),mobile_contactibility, 'credit_bureau' as source_system_name from (
+select id as dc_unified_id, case when phone is not null then phone else null end mobile_contactibility
+from customermart.mobile_no_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC'
+where mmp.dc_unified_id in (select dc_unified_id from customermart.temp_ci_6m_info mbdp)) as dddd) as ffff) as zz)
+
+
+
+
+
+
+create table customermart.temp_ci_6m_info_email as 
+(
+select distinct dc_unified_id , mobile_contactibility, source_system_name from (
+select * from (
+select cast(a.dc_unified_id as varchar),mobile_contactibility,source_system_name from (
+select distinct mbdp.dc_unified_id , c.source_system_name,
+case when communication_sub_type='email' and value is not null 
+then value else null end mobile_contactibility
+from  customermart.contactability c
+join  customermart.temp_ci_6m_info mbdp
+on c.source_system_customer_id = mbdp.customer_id) as a ) as f
+union 
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility, 'credit_bureau' as source_system_name from (
+select dc_unified_id, case when mobile is not null then mobile else null end mobile_contactibility from (
+select distinct mmp.dc_unified_id as dc_unified_id, coalesce(email_1, email_2, email_3, email_4) as mobile
+from datamarts.credit_bureau_data cbd 
+join public.mastercraft_master_prod mmp on cast(cbd.dc_unified_id as varchar)= cast(mmp.dc_unified_id  as varchar)and mmp.dc_active_flag='1' and mmp.source_id='GC'
+where mmp.dc_unified_id in (select dc_unified_id from customermart.temp_ci_6m_info mbdp))as aa )as bb ) as cc 
+union
+select * from (
+select cast(dc_unified_id as varchar), mobile_contactibility, 'credit_bureau' as source_system_name from (
+select id as dc_unified_id, case when email is not null then email else null end mobile_contactibility
+from customermart.email_csv ec
+join public.mastercraft_master_prod mmp on cast(ec.id as varchar)= cast(mmp.dc_unified_id as varchar) and mmp.dc_active_flag='1' and mmp.source_id='GC'
+where mmp.dc_unified_id in (select dc_unified_id from customermart.temp_ci_6m_info mbdp))as aaa) as bbb) as dfg )
