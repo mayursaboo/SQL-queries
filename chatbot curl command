@@ -1,0 +1,56 @@
+API -Cover Details
+
+curl -X GET "es_read:/get_spa_cover_details/_search?pretty" -H 'Content-Type: application/json' -d'{
+    "_source": {},
+    "query": {
+        "bool": {
+                    "minimum_should_match":1,"should": [
+                {
+                    "bool": {
+                        "must": [
+                            {
+                                "term": {
+                                    "policy_no": "7040018752"
+                                }
+                            },
+                            {
+                                "term": {
+                                    "certificate_no": "00000000"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+}'
+
+
+API -2 additional policy details
+
+curl -X GET "es_read:/get_spa_additional_policy_details/_search?pretty" -H 'Content-Type: application/json' -d'{
+    "_source": {},
+    "query": {
+        "bool": {
+                    "minimum_should_match":1,"should": [
+                {
+                    "bool": {
+                        "must": [
+                            {
+                                "term": {
+                                    "policy_no": "7040018752"
+                                }
+                            },
+                            {
+                                "term": {
+                                    "certificate_no": "00000000"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+}'
